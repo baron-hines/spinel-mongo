@@ -2,3 +2,5 @@
 # subset-compatible port of the mongo gem. See README.md.
 require "bson"
 require "mongo/version"
+require "mongo/errors"
+require "mongo/wire"

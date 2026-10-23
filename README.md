@@ -14,8 +14,8 @@ It is built like its siblings
 client core over an injected transport (so the same tests run under CRuby
 and compiled), and a thin transport over Spinel's `sp_net` sockets.
 
-**Status: not usable yet.** This is the package skeleton. Nothing below
-the version constant exists until v0.1.0.
+**Status: not usable yet.** BSON and the wire layer are in. The
+connection, authentication and the collection API arrive before v0.1.0.
 
 ## Planned
 
@@ -86,11 +86,14 @@ byte, since the gem adds a session id that this driver doesn't send.
 | `bson_encode` | 14 documents (commands, replies, every type and number edge) encode to the gem's bytes |
 | `bson_decode` | The same bytes decode to the gem's values and classes, and Symbol keys read a `BSON::Document` |
 | `bson_malformed` | 19 kinds of malformed input raise the gem's error classes, never read past the end |
+| `wire_msg` | 8 `OP_MSG` requests, with and without a kind 1 section, match the bytes of the gem's `Mongo::Protocol::Msg` |
 | `crud_live` | Twin and snapshot only: `test/crud_live_test.rb` arrives with the collection API and must print the same lines |
 
 `test/bson_values_test.rb` is dual-runtime: ObjectId generation, the
 value classes, Document, number and string round trips, and the left-out
-types.
+types. So is `test/wire_parser_test.rb`: the frame parser over a scripted
+byte stream, with replies split at every awkward boundary, 500 in one
+read, and 15 kinds of malformed reply.
 
 CI builds Spinel at a pinned commit on every pull request, and Spinel's
 `master` once a week.
@@ -120,6 +123,20 @@ What the gem has and this driver doesn't, as it lands.
   `BSON::Document` reads Symbol keys through `[]`, `[]=`, `key?`, `fetch`,
   `delete` and `dig`, but doesn't convert nested Hashes on assignment, as
   the gem's does.
+
+**Wire protocol**
+
+- `OP_MSG` only. A reply with any other op code raises
+  `Mongo::Error::UnsupportedMessageType`, as the gem does for one it
+  doesn't know.
+- No compression, and no checksum on requests. A reply's checksum is
+  skipped, not checked.
+- No exhaust cursors: a reply with `moreToCome` set raises
+  `Mongo::Error::ProtocolError`, since nothing asks for one.
+- `Mongo::Error::ProtocolError` is this driver's own class, for a reply
+  that breaks the framing (a length too small for the header, a section
+  past the end, an unknown section kind or required flag). The gem has no
+  class for these. The connection is closed after one.
 
 ## Spinel notes
 

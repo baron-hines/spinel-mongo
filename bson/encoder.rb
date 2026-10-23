@@ -26,6 +26,13 @@ module BSON
       @buf
     end
 
+    # How many bytes are written so far. Use this rather than
+    # bytes.bytesize while still writing: taking the buffer out makes
+    # Spinel copy it on every later append.
+    def size
+      @buf.bytesize
+    end
+
     def document(doc)
       start = @buf.bytesize
       @buf << "\x00\x00\x00\x00".b
@@ -106,6 +113,17 @@ module BSON
         raise BSON::Error::UnserializableClass,
               "Value does not define its BSON serialized type: " + v.inspect
       end
+      nil
+    end
+
+    # Raw writers, for framing around documents (the wire layer's).
+    def byte(v)
+      @buf << [v].pack("C")
+      nil
+    end
+
+    def int32(v)
+      @buf << [v].pack("l<")
       nil
     end
 
