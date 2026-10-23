@@ -82,12 +82,15 @@ jobs:
 
       - name: Build Spinel
         if: steps.spinel-cache.outputs.cache-hit != 'true'
+        # Outside the checkout: spin compiles every source file under the
+        # package root, Spinel's own included.
         run: |
-          git clone --quiet https://github.com/matz/spinel spinel-src
-          git -C spinel-src checkout --quiet ${{ steps.spinel.outputs.sha }}
-          make -C spinel-src deps
-          make -C spinel-src -j4 all
-          make -C spinel-src install PREFIX="$HOME/.local"
+          src="$RUNNER_TEMP/spinel-src"
+          git clone --quiet https://github.com/matz/spinel "$src"
+          git -C "$src" checkout --quiet ${{ steps.spinel.outputs.sha }}
+          make -C "$src" deps
+          make -C "$src" -j4 all
+          make -C "$src" install PREFIX="$HOME/.local"
 
       - name: Put Spinel on PATH
         run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
