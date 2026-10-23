@@ -63,38 +63,80 @@ changed.
 ## Tests
 
 ```sh
-spin test        # dual-runtime lanes also run under CRuby and must match
-sh oracle/run.sh # every live flow through the real mongo gem
+spin test        # every test, compiled; some under CRuby too
+sh oracle/run.sh # every flow with a twin, through the real gems
 ```
 
 Tests with no committed `.expected` snapshot run compiled and under CRuby,
-and the two outputs must be identical. Live tests (from v0.1.0) start
-their own `mongod` on private ports and diff a committed snapshot; they
-need `mongod` on PATH.
+and the two outputs must be identical. Tests with a snapshot run compiled
+and are diffed against it; `spin test --regen` takes snapshots from
+CRuby. Live tests (from v0.1.0) start their own `mongod` on private
+ports; they need `mongod` on PATH.
 
-The oracle checks those snapshots against the reference driver. Each live
-flow `test/<flow>_test.rb` has a twin, `oracle/<flow>.rb`, that does the
-same through the `mongo` gem (2.26.0), and `oracle/run.sh` starts a
-throwaway `mongod` and diffs each twin's output against
-`test/<flow>_test.rb.expected`. Commands aren't compared byte for byte,
-since the gem adds a session id that this driver doesn't send.
+The oracle checks the snapshots against the reference implementations.
+A flow `test/<flow>_test.rb` with a snapshot has a twin,
+`oracle/<flow>.rb`, that does the same through the `bson` gem (5.2.0) or
+the `mongo` gem (2.26.0), and `oracle/run.sh` diffs each twin's output
+against `test/<flow>_test.rb.expected`. So the BSON snapshots are bytes
+and values the gem produces too. Live commands aren't compared byte for
+byte, since the gem adds a session id that this driver doesn't send.
 
-The first flow, `crud_live`, has its twin and snapshot but not yet its
-test: the snapshot was taken from the gem, and `test/crud_live_test.rb`
-arrives with the collection API and must print the same lines.
+| Flow | Checks |
+|---|---|
+| `bson_encode` | 14 documents (commands, replies, every type and number edge) encode to the gem's bytes |
+| `bson_decode` | The same bytes decode to the gem's values and classes, and Symbol keys read a `BSON::Document` |
+| `bson_malformed` | 19 kinds of malformed input raise the gem's error classes, never read past the end |
+| `crud_live` | Twin and snapshot only: `test/crud_live_test.rb` arrives with the collection API and must print the same lines |
+
+`test/bson_values_test.rb` is dual-runtime: ObjectId generation, the
+value classes, Document, number and string round trips, and the left-out
+types.
 
 CI builds Spinel at a pinned commit on every pull request, and Spinel's
 `master` once a week.
 
 ## Exclusion ledger
 
-What the gem has and this driver doesn't, as it lands. Empty until there
-is a driver to compare.
+What the gem has and this driver doesn't, as it lands.
+
+**BSON**
+
+- Decoding the types below raises `BSON::Error::UnsupportedType`, and
+  they have no Ruby classes to encode from: Decimal128 (`BSON::Decimal128`,
+  and so Mongoid's `BigDecimal` fields), regular expressions
+  (`BSON::Regexp::Raw`), timestamps (`BSON::Timestamp`), JavaScript with or
+  without scope, MinKey and MaxKey, DBPointer, undefined and the BSON
+  symbol type. A Symbol value is written as a string, as the gem writes
+  it by default.
+- No `to_bson`, `from_bson`, `BSON::ByteBuffer` or extended JSON.
+  Encode with `BSON.encode(hash)` and decode with `BSON.decode(bytes)` or
+  `BSON::Reader.new(bytes, pos).document`.
+- Any NaN is written as `000000000000f87f`, the bytes the gem writes for
+  `Float::NAN`. The gem writes a NaN with another payload as it is.
+- An Integer outside int64 raises `RangeError`, as in the gem. On Spinel
+  one only gets there under `--int-overflow=promote`; by default the
+  arithmetic that would make it raises first.
+- `BSON::ObjectId` has no `from_time`, `to_bson` or `as_json`.
+  `BSON::Document` reads Symbol keys through `[]`, `[]=`, `key?`, `fetch`,
+  `delete` and `dig`, but doesn't convert nested Hashes on assignment, as
+  the gem's does.
 
 ## Spinel notes
 
 Spinel behaviors the code works around, with the issue where there is one.
-Empty so far.
+
+- `Float::NAN` and `0.0 / 0.0` pack with the sign bit set on Spinel
+  (`000000000000f8ff`), where CRuby packs `000000000000f87f`. The encoder
+  writes CRuby's bytes for every NaN, so documents match the gem's on
+  both runtimes.
+- Building a String with `s = s + piece` copies it every time and is
+  quadratic on Spinel (2.5 s for 1 MB in 100-byte pieces), so the encoder
+  appends with `<<`.
+- A method whose last expression is `buf << x` returns the buffer, and
+  once a program does that, Spinel copies the buffer on every later
+  append: 40,000 appends of 100 bytes took 22 s instead of 41 ms. The
+  encoder keeps its buffer in an ivar and every method that appends ends
+  in `nil`. Encoding a 1.2 MB document takes about 50 ms compiled.
 
 ## License
 

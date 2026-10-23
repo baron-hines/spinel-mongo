@@ -1,0 +1,19 @@
+empty input: RangeError
+two bytes: RangeError
+length past the end: RangeError
+length under five: RangeError
+no closing nul: RangeError
+length short of the elements: BSON::Error::BSONDecodeError
+unterminated key: RangeError
+string length past the end: RangeError
+string length zero: BSON::Error::BSONDecodeError
+string without its nul: BSON::Error::BSONDecodeError
+string not UTF-8: EncodingError
+int32 cut short: RangeError
+int64 cut short: RangeError
+double cut short: RangeError
+ObjectId cut short: RangeError
+boolean of 2: BSON::Error::BSONDecodeError
+binary past the end: RangeError
+nested document past the end: RangeError
+unknown type 0x20: BSON::Error::UnsupportedType
