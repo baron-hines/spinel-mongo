@@ -63,14 +63,25 @@ changed.
 ## Tests
 
 ```sh
-spin test    # dual-runtime lanes also run under CRuby and must match
+spin test        # dual-runtime lanes also run under CRuby and must match
+sh oracle/run.sh # every live flow through the real mongo gem
 ```
 
 Tests with no committed `.expected` snapshot run compiled and under CRuby,
 and the two outputs must be identical. Live tests (from v0.1.0) start
 their own `mongod` on private ports and diff a committed snapshot; they
-need `mongod` on PATH. An oracle will replay every live flow through the
-real `mongo` gem.
+need `mongod` on PATH.
+
+The oracle checks those snapshots against the reference driver. Each live
+flow `test/<flow>_test.rb` has a twin, `oracle/<flow>.rb`, that does the
+same through the `mongo` gem (2.26.0), and `oracle/run.sh` starts a
+throwaway `mongod` and diffs each twin's output against
+`test/<flow>_test.rb.expected`. Commands aren't compared byte for byte,
+since the gem adds a session id that this driver doesn't send.
+
+The first flow, `crud_live`, has its twin and snapshot but not yet its
+test: the snapshot was taken from the gem, and `test/crud_live_test.rb`
+arrives with the collection API and must print the same lines.
 
 CI builds Spinel at a pinned commit on every pull request, and Spinel's
 `master` once a week.

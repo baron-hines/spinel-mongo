@@ -1,0 +1,10 @@
+hello ok=1.0 writable=true wire>=21=true
+insert_many inserted_count=3 same ids=true
+find Big Boy wheels=24 _id is ObjectId=true
+find Mallard wheels=14 _id is ObjectId=true
+count_documents retired=2
+update_one matched_count=1 modified_count=1
+delete_one deleted_count=1
+duplicate OperationFailure code=11000
+unknown OperationFailure code=59 code_name=CommandNotFound
+read back _id,name,wheels,retired wheels=16 same _id=true
