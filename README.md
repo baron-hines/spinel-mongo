@@ -47,6 +47,10 @@ v0.2.0: TLS through Spinel's bundled `openssl` package (behind
 `require "mongo/tls"`, so programs without TLS don't link libssl), and
 seed lists of several hosts.
 
+Not planned: sessions and transactions, change streams, GridFS, general
+aggregation, and more. The full list is in
+[UNPLANNED_FEATURES.md](UNPLANNED_FEATURES.md).
+
 ## Installing
 
 Once a release is tagged, depend on it by tag in `spin.toml`:
@@ -97,7 +101,9 @@ CI builds Spinel at a pinned commit on every pull request, and Spinel's
 
 ## Exclusion ledger
 
-What the gem has and this driver doesn't, as it lands.
+What the gem has and this driver doesn't, as it lands. What the gems
+support that this driver has no plan to add, and where it differs from
+them on purpose, is in [UNPLANNED_FEATURES.md](UNPLANNED_FEATURES.md).
 
 **BSON**
 
