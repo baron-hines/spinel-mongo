@@ -1,0 +1,263 @@
+hello consumed=true
+  Document(5)
+    hello:
+      Integer 1
+    helloOk:
+      Boolean true
+    client:
+      Document(3)
+        driver:
+          Document(2)
+            name:
+              String UTF-8 12 7370696e656c2d6d6f6e676f
+            version:
+              String UTF-8 5 302e302e30
+        os:
+          Document(3)
+            type:
+              String UTF-8 5 4c696e7578
+            name:
+              String UTF-8 5 6c696e7578
+            architecture:
+              String UTF-8 6 7838365f3634
+        platform:
+          String UTF-8 6 5370696e656c
+    saslSupportedMechs:
+      String UTF-8 9 61646d696e2e617070
+    $db:
+      String UTF-8 5 61646d696e
+  roundtrip true
+insert consumed=true
+  Document(4)
+    insert:
+      String UTF-8 11 6c6f636f6d6f7469766573
+    ordered:
+      Boolean true
+    documents:
+      Array(1)
+        Document(8)
+          _id:
+            ObjectId 653a1f0e9b1e8a0001a2b3c4
+          name:
+            String UTF-8 7 42696720426f79
+          wheels:
+            Integer 24
+          built:
+            Time -893376000000 utc=true
+          tractive_lbf:
+            Float 135375.5 000000007c860041
+          retired:
+            Boolean true
+          notes:
+            nil
+          inspected_at:
+            Time 1761177600123 utc=true
+    $db:
+      String UTF-8 4 74657374
+  roundtrip true
+find consumed=true
+  Document(6)
+    find:
+      String UTF-8 11 6c6f636f6d6f7469766573
+    filter:
+      Document(2)
+        wheels:
+          Document(1)
+            $gt:
+              Integer 4
+        name:
+          Document(1)
+            $in:
+              Array(2)
+                String UTF-8 7 42696720426f79
+                String UTF-8 7 4d616c6c617264
+    sort:
+      Document(1)
+        built:
+          Integer -1
+    limit:
+      Integer 2
+    batchSize:
+      Integer 1
+    $db:
+      String UTF-8 4 74657374
+  roundtrip true
+symbol_keys consumed=true
+  Document(3)
+    find:
+      String UTF-8 11 6c6f636f6d6f7469766573
+    filter:
+      Document(1)
+        name:
+          String UTF-8 7 4d616c6c617264
+    $db:
+      String UTF-8 4 74657374
+  roundtrip true
+symbol_value consumed=true
+  Document(2)
+    status:
+      String UTF-8 7 72657469726564
+    tags:
+      Array(2)
+        String UTF-8 5 737465616d
+        String UTF-8 7 66726569676874
+  roundtrip true
+getmore consumed=true
+  Document(3)
+    getMore:
+      Integer 123
+    collection:
+      String UTF-8 11 6c6f636f6d6f7469766573
+    $db:
+      String UTF-8 4 74657374
+  roundtrip false
+numbers consumed=true
+  Document(18)
+    i32_min:
+      Integer -2147483648
+    i32_max:
+      Integer 2147483647
+    i64_low:
+      Integer -2147483649
+    i64_high:
+      Integer 2147483648
+    i64_min:
+      Integer -9223372036854775808
+    i64_max:
+      Integer 9223372036854775807
+    forced_i64:
+      Integer 1
+    forced_i64_neg:
+      Integer -1
+    zero:
+      Integer 0
+    d_tenth:
+      Float 0.1 9a9999999999b93f
+    d_neg_zero:
+      Float -0.0 0000000000000080
+    d_big:
+      Float 1.0e+308 a0c8eb85f3cce17f
+    d_tiny:
+      Float 5.0e-324 0100000000000000
+    d_inf:
+      Float Infinity 000000000000f07f
+    d_ninf:
+      Float -Infinity 000000000000f0ff
+    d_17:
+      Float 0.30000000000000004 343333333333d33f
+    d_nan:
+      Float NaN 000000000000f87f
+    d_nan_div:
+      Float NaN 000000000000f87f
+  roundtrip false
+strings consumed=true
+  Document(6)
+    empty:
+      String UTF-8 0 
+    nul_inside:
+      String UTF-8 3 610062
+    utf8:
+      String UTF-8 12 e6a99fe996a2e8bb8a20c3a9
+    nested_empty:
+      Document(0)
+    array_empty:
+      Array(0)
+    mixed_array:
+      Array(6)
+        Integer 1
+        String UTF-8 3 74776f
+        Float 3.0 0000000000000840
+        nil
+        Boolean true
+        Document(1)
+          k:
+            Array(0)
+  roundtrip true
+binaries consumed=true
+  Document(6)
+    generic:
+      Binary generic 78000079 ASCII-8BIT
+    uuid:
+      Binary uuid 112233445566478899aabbccddeeff00 ASCII-8BIT
+    old:
+      Binary old 6162 ASCII-8BIT
+    md5:
+      Binary md5 30313233343536373839616263646566 ASCII-8BIT
+    user:
+      Binary user 75 ASCII-8BIT
+    empty:
+      Binary generic  ASCII-8BIT
+  roundtrip true
+times consumed=true
+  Document(4)
+    epoch:
+      Time 0 utc=true
+    ms:
+      Time 1999 utc=true
+    before_epoch_ms:
+      Time -999 utc=true
+    y2038:
+      Time 2147483648000 utc=true
+  roundtrip true
+document_input consumed=true
+  Document(2)
+    a:
+      Integer 1
+    b:
+      Document(1)
+        c:
+          String UTF-8 1 64
+  roundtrip true
+reply_cursor consumed=true
+  Document(2)
+    cursor:
+      Document(3)
+        firstBatch:
+          Array(1)
+            Document(3)
+              _id:
+                ObjectId 653a1f0e9b1e8a0001a2b3c4
+              name:
+                String UTF-8 7 42696720426f79
+              wheels:
+                Integer 24
+        id:
+          Integer 7310152818270717953
+        ns:
+          String UTF-8 16 746573742e6c6f636f6d6f7469766573
+    ok:
+      Float 1.0 000000000000f03f
+  roundtrip true
+reply_write_error consumed=true
+  Document(3)
+    n:
+      Integer 0
+    writeErrors:
+      Array(1)
+        Document(3)
+          index:
+            Integer 0
+          code:
+            Integer 11000
+          errmsg:
+            String UTF-8 26 453131303030206475706c6963617465206b6579206572726f72
+    ok:
+      Float 1.0 000000000000f03f
+  roundtrip true
+reply_command_error consumed=true
+  Document(4)
+    ok:
+      Float 0.0 0000000000000000
+    errmsg:
+      String UTF-8 17 636f6d6d616e64206e6f7420666f756e64
+    code:
+      Integer 59
+    codeName:
+      String UTF-8 15 436f6d6d616e644e6f74466f756e64
+  roundtrip true
+cursor id 7310152818270717953 int=true
+first Big Boy wheels+1=25
+ok true
+key? true true false
+fetch 1.0 default
+dig test.locomotives
