@@ -105,6 +105,9 @@ jobs:
       - name: spin test
         run: spin test
 
+      - name: Oracle
+        run: sh oracle/run.sh
+
       - name: Upload build output
         if: failure()
         uses: actions/upload-artifact@v7

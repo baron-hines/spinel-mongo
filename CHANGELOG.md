@@ -8,3 +8,4 @@ in the same pull request as the change.
 
 - The package skeleton: `spin.toml`, `Mongo::VERSION`, one dual-runtime
   test, and CI.
+- The oracle harness, `oracle/run.sh`, with its first flow (`crud_live`).
