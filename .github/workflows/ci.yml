@@ -1,0 +1,115 @@
+name: CI
+
+# Builds Spinel (pinned on pushes and pull requests, master on the weekly
+# run, so a Spinel change that breaks the driver shows up early), then
+# runs `spin test`: the dual-runtime lanes compiled and under CRuby, and
+# the live lanes against throwaway mongod instances. The oracle, which
+# replays the live flows through the real mongo gem, joins in oracle/.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      spinel_ref:
+        description: Spinel commit or branch to build (empty for the pin)
+        default: ""
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # The Spinel the driver is tested against. The weekly run builds master.
+  SPINEL_PIN: 7181da6fa955836c620761e1bfb4d15185579061
+  # The MongoDB server version the live lanes run against.
+  MONGODB_IMAGE: mongo:8.0.34
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install system packages Spinel needs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4.11'
+
+      - name: Gems for the CRuby lanes and the oracle
+        run: |
+          gem install --no-document bson -v 5.2.0
+          gem install --no-document mongo -v 2.26.0
+
+      - name: Put mongod on PATH
+        run: |
+          id=$(docker create "$MONGODB_IMAGE")
+          mkdir -p "$RUNNER_TEMP/mongod/bin"
+          docker cp "$id:/usr/bin/mongod" "$RUNNER_TEMP/mongod/bin/mongod"
+          docker rm "$id"
+          echo "$RUNNER_TEMP/mongod/bin" >> "$GITHUB_PATH"
+
+      - name: Find the Spinel to build
+        id: spinel
+        env:
+          REQUESTED: ${{ inputs.spinel_ref }}
+        run: |
+          ref="$SPINEL_PIN"
+          [ "${{ github.event_name }}" = schedule ] && ref=master
+          [ -n "$REQUESTED" ] && ref="$REQUESTED"
+          sha=$(git ls-remote https://github.com/matz/spinel "refs/heads/$ref" | cut -f1)
+          echo "sha=${sha:-$ref}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Spinel build
+        id: spinel-cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.local/bin
+            ~/.local/lib/spinel
+          key: spinel-${{ runner.os }}-${{ steps.spinel.outputs.sha }}
+
+      - name: Build Spinel
+        if: steps.spinel-cache.outputs.cache-hit != 'true'
+        # Outside the checkout: spin compiles every source file under the
+        # package root, Spinel's own included.
+        run: |
+          src="$RUNNER_TEMP/spinel-src"
+          git clone --quiet https://github.com/matz/spinel "$src"
+          git -C "$src" checkout --quiet ${{ steps.spinel.outputs.sha }}
+          make -C "$src" deps
+          make -C "$src" -j4 all
+          make -C "$src" install PREFIX="$HOME/.local"
+
+      - name: Put Spinel on PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Versions
+        run: |
+          spinel --version
+          ruby -v
+          mongod --version | head -1
+          gem list '^(bson|mongo)$'
+
+      - name: spin test
+        run: spin test
+
+      - name: Upload build output
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: spin-test-build
+          path: build/
+          if-no-files-found: ignore
+          retention-days: 7

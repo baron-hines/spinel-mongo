@@ -1,0 +1,5 @@
+[package]
+name = "mongo"
+version = "0.0.1"
+
+# published repos are conventionally named spinel-mongo
