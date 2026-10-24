@@ -1,7 +1,7 @@
 #!/bin/sh
 # Oracle harness: replay every flow that has a twin in oracle/ through
-# the real gems (bson for the BSON flows, mongo for the live ones) and
-# diff its output against the flow's committed snapshot,
+# the real gems (bson for the BSON flows, mongo for the wire and live
+# ones) and diff its output against the flow's committed snapshot,
 # test/<flow>_test.rb.expected. spin test checks the same snapshot
 # against spinel-mongo compiled by Spinel, so a match here means the
 # gems print the same as spinel-mongo from the same flow.
@@ -13,7 +13,7 @@
 
 ORACLE_PORT=${ORACLE_PORT:-27217}
 OUTDIR=build/oracle
-FLOWS="bson_encode bson_decode bson_malformed crud_live"
+FLOWS="bson_encode bson_decode bson_malformed wire_msg crud_live"
 
 rm -rf "$OUTDIR"
 mkdir -p "$OUTDIR/db"

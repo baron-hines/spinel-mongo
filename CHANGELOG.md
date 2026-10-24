@@ -13,3 +13,7 @@ in the same pull request as the change.
   array, binary, ObjectId, boolean, UTC datetime, null, int32 and int64,
   byte-identical to the bson gem; `BSON::ObjectId`, `BSON::Int64`,
   `BSON::Binary`, `BSON::Document` and the gem's error classes.
+- The wire layer: `Mongo::Wire.op_msg`, byte-identical to the gem's
+  `OP_MSG` requests, and `Mongo::Wire::Parser`, which cuts replies out of
+  a byte stream. `Mongo::Error` with `MaxMessageSize`,
+  `UnsupportedMessageType` and `ProtocolError`.
