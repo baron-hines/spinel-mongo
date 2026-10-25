@@ -4,7 +4,7 @@
 # sharing a read with the next reply, the checksum flag), many replies in
 # one read, then each kind of malformed reply. CRuby's output is the
 # expectation.
-require "mongo"
+require "mongo/wire"
 
 def le32(n)
   [n].pack("l<")

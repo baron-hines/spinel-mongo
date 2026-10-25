@@ -17,3 +17,9 @@ in the same pull request as the change.
   `OP_MSG` requests, and `Mongo::Wire::Parser`, which cuts replies out of
   a byte stream. `Mongo::Error` with `MaxMessageSize`,
   `UnsupportedMessageType` and `ProtocolError`.
+- The connection: `Mongo::Transport` over Spinel's sockets with
+  `connect_timeout` and `socket_timeout`, and `Mongo::Connection` with the
+  `hello` handshake, `command`, `command_seq` and `write_seq`. The gem's
+  `OperationFailure`, `BulkWriteError`, `NoServerAvailable`, `SocketError`,
+  `SocketTimeoutError`, `UnexpectedResponse` and `UnsupportedFeatures`,
+  with the gem's messages for failed replies.

@@ -13,12 +13,13 @@
 
 ORACLE_PORT=${ORACLE_PORT:-27217}
 OUTDIR=build/oracle
-FLOWS="bson_encode bson_decode bson_malformed wire_msg crud_live"
+FLOWS="bson_encode bson_decode bson_malformed wire_msg connection_live crud_live"
 
 rm -rf "$OUTDIR"
 mkdir -p "$OUTDIR/db"
 mongod --port "$ORACLE_PORT" --bind_ip 127.0.0.1 --dbpath "$OUTDIR/db" \
-  --wiredTigerCacheSizeGB 0.25 --logpath "$OUTDIR/mongod.log" \
+  --wiredTigerCacheSizeGB 0.25 --setParameter enableTestCommands=1 \
+  --logpath "$OUTDIR/mongod.log" \
   --pidfilepath "$OUTDIR/mongod.pid" > /dev/null 2>&1 &
 mongod_pid=$!
 trap 'kill $mongod_pid 2> /dev/null; wait $mongod_pid 2> /dev/null' EXIT

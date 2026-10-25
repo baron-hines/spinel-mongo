@@ -14,8 +14,8 @@ It is built like its siblings
 client core over an injected transport (so the same tests run under CRuby
 and compiled), and a thin transport over Spinel's `sp_net` sockets.
 
-**Status: not usable yet.** BSON and the wire layer are in. The
-connection, authentication and the collection API arrive before v0.1.0.
+**Status: not usable yet.** BSON, the wire layer and the connection are
+in. Authentication and the collection API arrive before v0.1.0.
 
 ## Planned
 
@@ -74,8 +74,9 @@ sh oracle/run.sh # every flow with a twin, through the real gems
 Tests with no committed `.expected` snapshot run compiled and under CRuby,
 and the two outputs must be identical. Tests with a snapshot run compiled
 and are diffed against it; `spin test --regen` takes snapshots from
-CRuby. Live tests (from v0.1.0) start their own `mongod` on private
-ports; they need `mongod` on PATH.
+CRuby. Live tests can't run under CRuby, since the transport binds
+Spinel's sockets, so their snapshots come from the compiled run and the
+oracle checks them. They need `mongod` on PATH.
 
 The oracle checks the snapshots against the reference implementations.
 A flow `test/<flow>_test.rb` with a snapshot has a twin,
@@ -91,13 +92,26 @@ byte, since the gem adds a session id that this driver doesn't send.
 | `bson_decode` | The same bytes decode to the gem's values and classes, and Symbol keys read a `BSON::Document` |
 | `bson_malformed` | 19 kinds of malformed input raise the gem's error classes, never read past the end |
 | `wire_msg` | 8 `OP_MSG` requests, with and without a kind 1 section, match the bytes of the gem's `Mongo::Protocol::Msg` |
+| `connection_live` | Against a real `mongod`: the handshake's limits, `ping`, an unknown command, a duplicate key, a bulk write with two, a read back, a command past `socket_timeout`, a refused connect, each raising the gem's class and message |
 | `crud_live` | Twin and snapshot only: `test/crud_live_test.rb` arrives with the collection API and must print the same lines |
 
 `test/bson_values_test.rb` is dual-runtime: ObjectId generation, the
 value classes, Document, number and string round trips, and the left-out
 types. So is `test/wire_parser_test.rb`: the frame parser over a scripted
 byte stream, with replies split at every awkward boundary, 500 in one
-read, and 15 kinds of malformed reply.
+read, and 15 kinds of malformed reply. And `test/connection_test.rb`: the
+connection over a scripted transport, with the handshake, each kind of
+failed reply and each way a connection breaks.
+
+`test/timeouts_live_test.rb` checks that `connect_timeout` and
+`socket_timeout` give up within a second of their setting, against
+listeners that never accept. It has a snapshot but no twin: the gem
+raises the same `Mongo::Error::NoServerAvailable`, but only after its
+server selection loop.
+
+Live tests start their own `mongod` (with test commands on, for
+`sleep`) on a private port with a throwaway `--dbpath` under
+`build/live/`, and stop it when they finish.
 
 CI builds Spinel at a pinned commit on every pull request, and Spinel's
 `master` once a week.
@@ -144,6 +158,29 @@ them on purpose, is in [UNPLANNED_FEATURES.md](UNPLANNED_FEATURES.md).
   past the end, an unknown section kind or required flag). The gem has no
   class for these. The connection is closed after one.
 
+**Connection**
+
+- One connection, no pool and no monitoring. A refused or timed-out
+  connect, or a handshake that fails, raises
+  `Mongo::Error::NoServerAvailable` at once, where the gem keeps trying
+  for `server_selection_timeout` (30 seconds by default). The message
+  names the address and the cause, not a server selector.
+- After a network error, a read past `socket_timeout`, or a reply the
+  driver can't trust, the connection is closed and later commands on it
+  raise `Mongo::Error::SocketError`. Nothing is retried, since a write may
+  have reached the server.
+- `Mongo::Error::OperationFailure` and `BulkWriteError` carry the gem's
+  message, built from the reply the same way, without two additions: the
+  note on where it happened (`" (on 127.0.0.1:27017, ...)"`) and the
+  server's `errInfo` details (`" -- {...}"`). `OperationFailure` has
+  `code`, `code_name`, `server_message` and `document`, but no error
+  labels, write concern accessors or retryability predicates.
+- The handshake offers no compression and sends no `env` or
+  `backpressure` fields. Its `platform` names the runtime and the Ruby
+  version Spinel implements (`"Spinel (Ruby 4.0.7), x86_64-linux"`), not
+  Spinel's own version, which a program can't read. Servers older than
+  MongoDB 6.0 are refused with `Mongo::Error::UnsupportedFeatures`.
+
 ## Spinel notes
 
 Spinel behaviors the code works around, with the issue where there is one.
@@ -160,6 +197,10 @@ Spinel behaviors the code works around, with the issue where there is one.
   append: 40,000 appends of 100 bytes took 22 s instead of 41 ms. The
   encoder keeps its buffer in an ivar and every method that appends ends
   in `nil`. Encoding a 1.2 MB document takes about 50 ms compiled.
+- `is_a?` doesn't narrow a `rescue` variable: after
+  `rescue Mongo::Error => e`, `e.code` inside `if e.is_a?(Mongo::Error::OperationFailure)`
+  raises `NoMethodError` compiled. Rescue the subclass itself, or pass
+  `e` to a method and narrow there.
 
 ## License
 
