@@ -1,0 +1,3 @@
+queue full true
+connect_timeout 1: Mongo::Error::NoServerAvailable after 1s=true
+hello never answered, socket_timeout 1: Mongo::Error::NoServerAvailable after 1s=true

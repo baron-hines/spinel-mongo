@@ -1,6 +1,6 @@
 # The package loads and names its version. Dual-runtime: no snapshot is
 # committed, so `spin test` diffs the compiled run against CRuby.
-require "mongo"
+require "mongo/version"
 
 puts "version " + Mongo::VERSION
 parts = Mongo::VERSION.split(".")

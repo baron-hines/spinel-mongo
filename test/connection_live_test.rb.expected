@@ -1,0 +1,10 @@
+hello ok=1.0 writable=true wire>=17=true bson=16777216 msg=48000000 batch=100000
+ping ok=1.0
+unknown: Mongo::Error::OperationFailure [59:CommandNotFound]: no such command: 'nope' code=59 code_name=CommandNotFound
+insert n=2
+duplicate: Mongo::Error::OperationFailure [11000]: E11000 duplicate key error collection: connection_live.locomotives index: _id_ dup key: { _id: 1 } code=11000 code_name=nil
+bulk: Mongo::Error::BulkWriteError Multiple errors: [11000]: E11000 duplicate key error collection: connection_live.locomotives index: _id_ dup key: { _id: 1 }; [11000]: E11000 duplicate key error collection: connection_live.locomotives index: _id_ dup key: { _id: 2 } indexes=0,2
+find Big Boy,Mallard,Flying Scotsman,Rocket
+sleep past socket_timeout 1: Mongo::Error::SocketTimeoutError after 1s=true
+a new connection pings ok=1.0
+refused: Mongo::Error::NoServerAvailable
