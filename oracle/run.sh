@@ -9,11 +9,12 @@
 # Usage: sh oracle/run.sh            (from the repo root)
 # Needs: ruby with the bson and mongo gems, and mongod on PATH. It
 # starts its own mongod on $ORACLE_PORT with a throwaway --dbpath and
-# stops it on exit.
+# stops it on exit. auth_live starts another, with --auth, on the port
+# after it.
 
 ORACLE_PORT=${ORACLE_PORT:-27217}
 OUTDIR=build/oracle
-FLOWS="bson_encode bson_decode bson_malformed wire_msg connection_live crud_live"
+FLOWS="bson_encode bson_decode bson_malformed wire_msg connection_live auth_live crud_live"
 
 rm -rf "$OUTDIR"
 mkdir -p "$OUTDIR/db"

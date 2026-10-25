@@ -1,6 +1,7 @@
 # The mongo gem's error classes that spinel-mongo raises, with the gem's
 # messages, plus ProtocolError for a reply the driver can't read, which
-# the gem has no class for. Later layers add theirs here.
+# the gem has no class for, and Mongo::Auth::Unauthorized, which the gem
+# keeps outside Mongo::Error. Later layers add theirs here.
 #
 # OperationFailure and BulkWriteError build their messages from a reply
 # the way the gem's Mongo::Error::Parser does, so a program sees the
@@ -201,6 +202,93 @@ module Mongo
         fragment = fragment + "..." if errors.length > 10 || cut_short
         fragment = "Multiple errors: " + fragment if errors.length > 1
         fragment
+      end
+    end
+
+    # The gem's base for authentication errors. It is a RuntimeError, not
+    # a Mongo::Error, so `rescue Mongo::Error` doesn't catch it.
+    class AuthError < RuntimeError
+    end
+
+    # A SCRAM reply that breaks the conversation: a malformed payload, or
+    # no done: true after the last step.
+    class InvalidServerAuthResponse < AuthError
+    end
+
+    # The server's nonce doesn't extend the one the client sent.
+    class InvalidNonce < Error
+      def initialize(nonce, rnonce)
+        super("Expected server rnonce '" + rnonce + "' to start with client nonce '" + nonce + "'.")
+        @nonce = nonce
+        @rnonce = rnonce
+      end
+
+      def nonce
+        @nonce
+      end
+
+      def rnonce
+        @rnonce
+      end
+    end
+
+    # The server's final message proves it doesn't know the password.
+    class InvalidSignature < Error
+      def initialize(verifier, server_signature)
+        super("Expected server verifier '" + verifier + "' to match '" + server_signature + "'.")
+        @verifier = verifier
+        @server_signature = server_signature
+      end
+
+      def verifier
+        @verifier
+      end
+
+      def server_signature
+        @server_signature
+      end
+    end
+
+    class InsufficientIterationCount < Error
+      def self.message(required_count, given_count)
+        "This auth mechanism requires an iteration count of " + required_count.to_s +
+          ", but the server only requested " + given_count.to_s
+      end
+    end
+
+    class MissingScramServerSignature < Error
+      def initialize(msg = "Server signaled completion of SCRAM conversation without providing ServerSignature")
+        super(msg)
+      end
+    end
+  end
+
+  module Auth
+    # The server refused the credentials, or a SCRAM step failed on its
+    # side. code is the server's, or nil.
+    class Unauthorized < Mongo::Error::AuthError
+      def initialize(message, code)
+        super(message)
+        @code = code
+      end
+
+      def code
+        @code
+      end
+
+      # The gem's message, without the "used server" part:
+      # "User app (mechanism: scram256) is not authorized to access
+      # railyard (auth source: admin, used mechanism: SCRAM-SHA-256):
+      # [18:AuthenticationFailed]: Authentication failed." The gem names
+      # the mechanism twice, by its own symbol and by SCRAM's name, and so
+      # it does when it negotiated the mechanism, since it fills in the
+      # user's then.
+      def self.build_message(user, database, auth_source, used, detail)
+        msg = "User " + user + " (mechanism: " + (used == "SCRAM-SHA-1" ? "scram" : "scram256") + ")"
+        msg = msg + " is not authorized to access " + database + " (auth source: " + auth_source +
+              ", used mechanism: " + used + ")"
+        msg = msg + ": " + detail if detail != ""
+        msg
       end
     end
   end

@@ -14,13 +14,14 @@ def live_dir(name)
 end
 
 # --fork returns once mongod is ready for connections. Test commands
-# are on for the sleep command the timeout case uses.
-def live_mongod_start(name, port)
+# are on for the sleep command the timeout case uses. extra adds
+# options, such as --auth.
+def live_mongod_start(name, port, extra = "")
   dir = live_dir(name)
   live_sh("rm -rf " + dir + " && mkdir -p " + dir + "/db")
   live_sh("mongod --port " + port.to_s + " --bind_ip 127.0.0.1 --dbpath " + dir + "/db --fork" +
           " --logpath " + dir + "/mongod.log --wiredTigerCacheSizeGB 0.25" +
-          " --setParameter enableTestCommands=1 > /dev/null 2>&1")
+          " --setParameter enableTestCommands=1 " + extra + " > /dev/null 2>&1")
   nil
 end
 

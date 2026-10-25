@@ -14,8 +14,9 @@ It is built like its siblings
 client core over an injected transport (so the same tests run under CRuby
 and compiled), and a thin transport over Spinel's `sp_net` sockets.
 
-**Status: not usable yet.** BSON, the wire layer and the connection are
-in. Authentication and the collection API arrive before v0.1.0.
+**Status: not usable yet.** BSON, the wire layer, the connection and
+SCRAM authentication are in. The client and collection API arrive before
+v0.1.0.
 
 ## Planned
 
@@ -93,6 +94,7 @@ byte, since the gem adds a session id that this driver doesn't send.
 | `bson_malformed` | 19 kinds of malformed input raise the gem's error classes, never read past the end |
 | `wire_msg` | 8 `OP_MSG` requests, with and without a kind 1 section, match the bytes of the gem's `Mongo::Protocol::Msg` |
 | `connection_live` | Against a real `mongod`: the handshake's limits, `ping`, an unknown command, a duplicate key, a bulk write with two, a read back, a command past `socket_timeout`, a refused connect, each raising the gem's class and message |
+| `auth_live` | Against a `mongod` started with `--auth`: SCRAM-SHA-256 and SCRAM-SHA-1, chosen and negotiated, a wrong password, the wrong `authSource`, SCRAM-SHA-256 for a user without it, a command before any login and one outside the user's role, each with the gem's class and message |
 | `crud_live` | Twin and snapshot only: `test/crud_live_test.rb` arrives with the collection API and must print the same lines |
 
 `test/bson_values_test.rb` is dual-runtime: ObjectId generation, the
@@ -101,7 +103,11 @@ types. So is `test/wire_parser_test.rb`: the frame parser over a scripted
 byte stream, with replies split at every awkward boundary, 500 in one
 read, and 15 kinds of malformed reply. And `test/connection_test.rb`: the
 connection over a scripted transport, with the handshake, each kind of
-failed reply and each way a connection breaks.
+failed reply and each way a connection breaks. And `test/scram_test.rb`:
+SHA-1, SHA-256, HMAC and PBKDF2 against published vectors, the whole
+exchanges from RFC 7677, RFC 5802 and MongoDB's auth spec, each check on
+the server's messages, and logins against a scripted server that does
+the server side of SCRAM.
 
 `test/timeouts_live_test.rb` checks that `connect_timeout` and
 `socket_timeout` give up within a second of their setting, against
@@ -180,6 +186,26 @@ them on purpose, is in [UNPLANNED_FEATURES.md](UNPLANNED_FEATURES.md).
   version Spinel implements (`"Spinel (Ruby 4.0.7), x86_64-linux"`), not
   Spinel's own version, which a program can't read. Servers older than
   MongoDB 6.0 are refused with `Mongo::Error::UnsupportedFeatures`.
+
+**Authentication**
+
+- SCRAM-SHA-256 and SCRAM-SHA-1 only: no X.509, LDAP (`PLAIN`), Kerberos,
+  AWS or MONGODB-CR. The mechanism is chosen as the gem chooses it, from
+  the handshake's `saslSupportedMechs`, unless one is asked for.
+- SCRAM-SHA-256 passwords must be printable ASCII. SASLprep leaves those
+  unchanged, and anything else would need its Unicode tables, so other
+  passwords raise `ArgumentError` before anything is sent. SCRAM-SHA-1
+  takes any password, since MongoDB hashes it with MD5 first.
+- No speculative authentication: the first step goes in its own
+  `saslStart` rather than inside `hello`, which costs one round trip per
+  connection. No credential cache: each login runs PBKDF2 again (about
+  40 ms compiled at the server's default 15,000 rounds).
+- `Mongo::Auth::Unauthorized` carries the gem's message without its last
+  part, `", used server: 127.0.0.1:27017 (STANDALONE)"`, and has `code`
+  but no error labels. A connection whose login fails is closed.
+- The hashes are Spinel's bundled `digest` package, which binds the
+  runtime's own crypto: a program that authenticates links no libssl.
+  HMAC and PBKDF2 are Ruby over it.
 
 ## Spinel notes
 

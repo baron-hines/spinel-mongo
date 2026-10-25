@@ -23,3 +23,8 @@ in the same pull request as the change.
   `OperationFailure`, `BulkWriteError`, `NoServerAvailable`, `SocketError`,
   `SocketTimeoutError`, `UnexpectedResponse` and `UnsupportedFeatures`,
   with the gem's messages for failed replies.
+- SCRAM-SHA-256 and SCRAM-SHA-1: `Mongo::Scram` over the bundled `digest`
+  and `securerandom` packages, and `Connection#authenticate`, which picks
+  the mechanism as the gem does. The gem's `Mongo::Auth::Unauthorized`,
+  `InvalidNonce`, `InvalidSignature`, `InsufficientIterationCount`,
+  `MissingScramServerSignature` and `InvalidServerAuthResponse`.
