@@ -44,3 +44,6 @@ in the same pull request as the change.
 - Threads and forks: threads share a client's connection a round trip at
   a time, a forked child opens its own, and a connection the server has
   closed since its last reply is replaced before it is used.
+- Examples: `examples/quickstart.rb` and `examples/threads.rb`, which
+  `examples/run.sh` compiles and runs in CI, checking each against the
+  gem's output for the same program.
