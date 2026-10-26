@@ -1,0 +1,11 @@
+app, negotiated: SCRAM-SHA-256 as app@admin
+app, SCRAM-SHA-256: SCRAM-SHA-256 as app@admin
+app, SCRAM-SHA-1: SCRAM-SHA-1 as app@admin
+legacy, negotiated: SCRAM-SHA-1 as legacy@admin
+legacy insert n=1
+legacy outside its role: Mongo::Error::OperationFailure [13:Unauthorized]: not authorized on elsewhere code=13
+wrong password: Mongo::Auth::Unauthorized User app (mechanism: scram256) is not authorized to access auth_live (auth source: admin, used mechanism: SCRAM-SHA-256): [18:AuthenticationFailed]: Authentication failed. code=18
+wrong password, SCRAM-SHA-1: Mongo::Auth::Unauthorized User app (mechanism: scram) is not authorized to access auth_live (auth source: admin, used mechanism: SCRAM-SHA-1): [18:AuthenticationFailed]: Authentication failed. code=18
+wrong authSource: Mongo::Auth::Unauthorized User app (mechanism: scram) is not authorized to access auth_live (auth source: auth_live, used mechanism: SCRAM-SHA-1): [18:AuthenticationFailed]: Authentication failed. code=18
+legacy asked for SCRAM-SHA-256: Mongo::Auth::Unauthorized User legacy (mechanism: scram256) is not authorized to access auth_live (auth source: admin, used mechanism: SCRAM-SHA-256): [334:MechanismUnavailable]: Unable to use SCRAM-SHA-256 based authentication for user without any SCRAM-SHA-256 credentials registered code=334
+no login: Mongo::Error::OperationFailure [13:Unauthorized]: Command find requires authentication code=13

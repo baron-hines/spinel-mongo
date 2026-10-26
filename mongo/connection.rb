@@ -8,11 +8,13 @@
 # decode it and raise the gem's errors. After a network or protocol
 # error the connection is closed for good, and every later command
 # raises SocketError: the caller opens a new one. Nothing is retried,
-# since a write may have reached the server.
+# since a write may have reached the server. authenticate logs in with
+# SCRAM after the handshake.
 require "bson"
 require "mongo/version"
 require "mongo/errors"
 require "mongo/wire"
+require "mongo/scram"
 
 module Mongo
   class Connection
@@ -153,6 +155,90 @@ module Mongo
         raise Mongo::Error::BulkWriteError.new(reply)
       end
       reply
+    end
+
+    # Logs in with SCRAM as user on the auth_source database. mechanism is
+    # Scram::SHA256 or Scram::SHA1, or "" to choose as the gem does:
+    # SCRAM-SHA-256 when the handshake's saslSupportedMechs lists it (pass
+    # "<auth_source>.<user>" to handshake for that), else SCRAM-SHA-1.
+    # database only names the target in the error message.
+    #
+    # A refusal raises Mongo::Auth::Unauthorized with the gem's message, a
+    # server that fails the SCRAM checks raises the gem's InvalidNonce,
+    # InvalidSignature or InsufficientIterationCount, and either way the
+    # connection is closed, as the gem drops a connection that failed to
+    # authenticate.
+    def authenticate(user, password, database, auth_source, mechanism = "")
+      used = mechanism
+      if used == ""
+        mechs = @hello["saslSupportedMechs"]
+        used = mechs.is_a?(Array) && mechs.include?(Scram::SHA256) ? Scram::SHA256 : Scram::SHA1
+      end
+      scram = Scram.new(used, user, Scram.secret(used, user, password), Scram.nonce)
+      begin
+        start = BSON::Document.new
+        start["saslStart"] = 1
+        start["autoAuthorize"] = 1
+        start["mechanism"] = used
+        start["payload"] = BSON::Binary.new(scram.client_first)
+        start["options"] = { "skipEmptyExchange" => true }
+        start["$db"] = auth_source
+        reply = sasl_step(start, user, database, auth_source, used)
+        conversation = reply["conversationId"]
+        step = BSON::Document.new
+        step["saslContinue"] = 1
+        step["payload"] = BSON::Binary.new(scram.client_final(payload_of(reply)))
+        step["conversationId"] = conversation
+        step["$db"] = auth_source
+        reply = sasl_step(step, user, database, auth_source, used)
+        scram.verify(payload_of(reply))
+        unless reply["done"] == true
+          last = BSON::Document.new
+          last["saslContinue"] = 1
+          last["payload"] = BSON::Binary.new("")
+          last["conversationId"] = conversation
+          last["$db"] = auth_source
+          reply = sasl_step(last, user, database, auth_source, used)
+        end
+        unless reply["done"] == true
+          raise Mongo::Error::InvalidServerAuthResponse,
+                "Server did not respond with {done: true} after finalizing the conversation"
+        end
+        raise Mongo::Error::MissingScramServerSignature unless scram.verified?
+      rescue Mongo::Error => e
+        close
+        raise e
+      rescue Mongo::Error::AuthError => e
+        close
+        raise e
+      end
+      used
+    end
+
+    # One SCRAM step: a reply with ok not 1 raises Unauthorized.
+    def sasl_step(cmd, user, database, auth_source, used)
+      reply = round_trip(cmd, "", [])
+      if reply["ok"] != 1
+        code = reply["code"]
+        code = nil unless code.is_a?(Integer)
+        text = reply["errmsg"]
+        text = "" unless text.is_a?(String)
+        code_name = reply["codeName"]
+        code_name = nil unless code_name.is_a?(String)
+        detail = Mongo::Error::OperationFailure.build_message(code, code_name, text)
+        raise Mongo::Auth::Unauthorized.new(
+          Mongo::Auth::Unauthorized.build_message(user, database, auth_source, used, detail), code)
+      end
+      reply
+    end
+
+    # A SCRAM reply's payload, as text.
+    def payload_of(reply)
+      payload = reply["payload"]
+      unless payload.is_a?(BSON::Binary)
+        raise Mongo::Error::InvalidServerAuthResponse, "Payload malformed: missing payload"
+      end
+      payload.data.dup.force_encoding("UTF-8")
     end
 
     def close
