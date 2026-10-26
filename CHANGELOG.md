@@ -38,3 +38,9 @@ in the same pull request as the change.
   `batch_size`, `each`, `first`, `to_a` and `count_documents`, over
   cursors that send `getMore` and close themselves with `killCursors`.
   The gem's result classes and `Mongo::Error::MaxBSONSize`.
+- Connection strings: `Mongo::URI`, which reads `mongodb://` URIs as the
+  gem does, and `Mongo::Client.new(uri, options)`, with the gem's
+  `Mongo::Error::InvalidURI` and its checks on credentials.
+- Threads and forks: threads share a client's connection a round trip at
+  a time, a forked child opens its own, and a connection the server has
+  closed since its last reply is replaced before it is used.

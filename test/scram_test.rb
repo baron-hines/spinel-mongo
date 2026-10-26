@@ -155,6 +155,10 @@ class ScramServer
     nil
   end
 
+  def peer_closed?
+    false
+  end
+
   def read_some(max)
     return "".b if @queue.length == 0
     @queue.shift

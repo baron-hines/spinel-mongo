@@ -14,9 +14,8 @@ Gaps that do have a plan are not listed here. They are at the end, under
 from the code as it stands today, planned or not.
 
 The driver is still being built. Where an entry describes how the driver
-behaves in a part that hasn't landed yet (URI strings, threads and
-forks, TLS, seed lists), it describes the design that part is being
-built to.
+behaves in a part that hasn't landed yet (TLS, seed lists), it describes
+the design that part is being built to.
 
 ## Sessions and transactions
 
@@ -146,6 +145,12 @@ built to.
     pinning cursors and transactions to one connection. This driver has
     no such mode. It talks to one server, or (from v0.2.0) to the primary
     of a seed list.
+
+- **UNIX domain sockets.**
+  - **A socket path as the host.** The gem connects to
+    `/tmp/mongodb-27017.sock`, given as is or percent-encoded in a URI.
+    This driver reads such a URI as the gem does, but connects only over
+    TCP, and raises `ArgumentError` for a socket path.
 
 - **Compression.**
   - **`compressors`.** The gem can compress messages on the wire with

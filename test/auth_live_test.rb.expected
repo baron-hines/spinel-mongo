@@ -11,3 +11,4 @@ legacy asked for SCRAM-SHA-256: Mongo::Auth::Unauthorized User legacy (mechanism
 no login: Mongo::Error::OperationFailure [13:Unauthorized]: Command find requires authentication code=13
 client as legacy: Big Boy, count 1
 client with a wrong password: Mongo::Auth::Unauthorized User app (mechanism: scram256) is not authorized to access auth_live (auth source: admin, used mechanism: SCRAM-SHA-256): [18:AuthenticationFailed]: Authentication failed.
+client from a URI: auth_live, count 1

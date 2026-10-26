@@ -30,6 +30,15 @@ def live_mongod_stop(name)
   nil
 end
 
+# Starts the mongod live_mongod_start started and _stop stopped again,
+# on its data.
+def live_mongod_resume(name, port)
+  dir = live_dir(name)
+  live_sh("mongod --port " + port.to_s + " --bind_ip 127.0.0.1 --dbpath " + dir + "/db --fork" +
+          " --logpath " + dir + "/mongod.log --logappend --wiredTigerCacheSizeGB 0.25 > /dev/null 2>&1")
+  nil
+end
+
 # A connection that has done its handshake.
 def live_connect(port, socket_timeout)
   t = Mongo::Transport.new("127.0.0.1", port, 5.0, socket_timeout)

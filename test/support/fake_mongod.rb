@@ -1,7 +1,8 @@
 # A pretend mongod for the dual-runtime client tests: one collection's
 # documents in memory, enough of find, getMore, killCursors, insert,
 # update, delete, aggregate, count, distinct, drop and listCollections to
-# drive the collection API, and a log of every command it is sent. Its
+# drive the collection API, and a log of every command it is sent. It can
+# be restarted, which closes every connection to it. Its
 # limits are small, so batching shows with a few documents. Filters match
 # by equality on top-level fields only.
 require "mongo/connection"
@@ -19,6 +20,20 @@ class FakeMongod
     @opens = []
     @drop_missing = false
     @close_next = false
+    @generation = 0
+  end
+
+  # Like a restart: every connection open now is closed by the server,
+  # and its cursors are gone.
+  def restart
+    @generation += 1
+    @cursors = {}
+    @cursor_names = {}
+    nil
+  end
+
+  def generation
+    @generation
   end
 
   def docs
@@ -213,9 +228,18 @@ class FakeTransport
   def initialize(mongod)
     @mongod = mongod
     @queue = []
+    @generation = mongod.generation
+  end
+
+  def peer_closed?
+    @generation != @mongod.generation
   end
 
   def write(bytes)
+    if peer_closed?
+      @queue.push("".b)
+      return nil
+    end
     if @mongod.close_next?
       @mongod.close_next = false
       @queue.push("".b)

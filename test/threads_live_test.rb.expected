@@ -1,0 +1,4 @@
+inserted 8000, count 8000
+per thread 1000,1000,1000,1000,1000,1000,1000,1000
+distinct seq 1000, distinct thread 8
+the CPU-bound thread ran: true

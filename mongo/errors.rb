@@ -207,6 +207,40 @@ module Mongo
 
     # A document larger than the server's maxBsonObjectSize, refused
     # before anything is sent.
+    # A connection string the driver can't read, with the gem's message:
+    # the string with its credentials hidden, what is wrong, the format
+    # when the gem gives it, and the manual's page.
+    class InvalidURI < Error
+      FORMAT = "mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]"
+      HELP = "https://www.mongodb.com/docs/manual/reference/connection-string/"
+
+      def initialize(uri, details, format = "")
+        message = "Bad URI: " + InvalidURI.redact(uri) + "\n" + details + "\n"
+        message += "MongoDB URI must be in the following format: " + format + "\n" unless format == ""
+        super(message + "Please see the following URL for more information: " + HELP + "\n")
+      end
+
+      # The string with anything between the scheme and the last @ before
+      # the first /, ? or # replaced by <credentials>, as the gem's
+      # Mongo::URI.redact does.
+      def self.redact(string)
+        lower = string.downcase
+        scheme = ""
+        scheme = "mongodb://" if lower.start_with?("mongodb://")
+        scheme = "mongodb+srv://" if lower.start_with?("mongodb+srv://")
+        return string if scheme == ""
+        rest = string[scheme.length, string.length - scheme.length]
+        stop = rest.length
+        ["/", "?", "#"].each do |c|
+          i = rest.index(c)
+          stop = i if !i.nil? && i < stop
+        end
+        at = rest[0, stop].rindex("@")
+        return string if at.nil?
+        string[0, scheme.length] + "<credentials>@" + rest[at + 1, rest.length - at - 1]
+      end
+    end
+
     class MaxBSONSize < Error
       MESSAGE = "The document exceeds maximum allowed BSON size"
 

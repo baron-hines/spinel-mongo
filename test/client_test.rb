@@ -233,3 +233,60 @@ end
 puts "next command ok=" + coll.database.command(ping: 1).ok?.to_s + " opens=" + m.opens.length.to_s
 coll.client.close
 puts "after close ok=" + coll.database.command(ping: 1).ok?.to_s + " opens=" + m.opens.length.to_s
+m.restart
+puts "after a restart ok=" + coll.database.command(ping: 1).ok?.to_s + " opens=" + m.opens.length.to_s
+cursor_coll = coll.client[:numbers]
+cursor_coll.insert_many([{ "_id" => 1 }, { "_id" => 2 }, { "_id" => 3 }])
+begin
+  cursor_coll.find.batch_size(1).each do |d|
+    m.restart if d["_id"] == 1
+  end
+rescue Mongo::Error::SocketError => e
+  failure("a restart under an open cursor", e)
+end
+puts "next command ok=" + coll.database.command(ping: 1).ok?.to_s + " opens=" + m.opens.length.to_s
+
+puts "-- URIs"
+m = FakeMongod.new(16 * 1024 * 1024, 48_000_000, 100_000)
+HUB.mongod = m
+c = Mongo::Client.new("mongodb://db.example:27018/railyard?appName=depot&connectTimeoutMS=2000&socketTimeoutMS=1500")
+puts "database " + c.database.name + " ping ok=" + c.database.command(ping: 1).ok?.to_s + " opened " + m.opens.join("; ")
+m.opens.clear
+c = Mongo::Client.new("mongodb://db.example/railyard?connectTimeoutMS=2000", database: "depot", connect_timeout: 3)
+puts "options over the URI's: database " + c.database.name + " ping ok=" + c.database.command(ping: 1).ok?.to_s +
+     " opened " + m.opens.join("; ")
+m.opens.clear
+c = Mongo::Client.new("mongodb://db.example:")
+c.database.command(ping: 1)
+puts "an empty port: opened " + m.opens.join("; ")
+["mongodb://h/?authMechanism=SCRAM-SHA-256", "mongodb://u@h/?authMechanism=SCRAM-SHA-256",
+ "mongodb://u:p@h/?authSource=&authMechanism=SCRAM-SHA-1", "mongodb://@h", "mongodb://u:p@h/?authSource=",
+ "mongodb://u:p@h/?authMechanism=PLAIN"].each do |s|
+  begin
+    Mongo::Client.new(s)
+    puts s + ": no error"
+  rescue Mongo::Auth::InvalidMechanism => e
+    failure(s, e)
+  rescue Mongo::Auth::InvalidConfiguration => e
+    failure(s, e)
+  end
+end
+[["tls", "mongodb://h/?tls=true", {}], ["ssl option", ["h:27017"], { ssl: true }],
+ ["two hosts", "mongodb://a,b/", {}], ["socket", "mongodb://%2Ftmp%2Fmongodb-27017.sock", {}]].each do |t|
+  begin
+    Mongo::Client.new(t[1], t[2])
+    puts t[0] + ": no error"
+  rescue ArgumentError => e
+    failure(t[0], e)
+  end
+end
+begin
+  Mongo::Client.new("mongodb+srv://u:p@cluster0.example.net/railyard")
+rescue Mongo::Error::InvalidURI => e
+  puts "srv: " + e.class.to_s + " " + e.message.split("\n")[0, 2].join(" | ")
+end
+begin
+  Mongo::Client.new("mongodb://u:p@h:abc")
+rescue Mongo::Error::InvalidURI => e
+  puts "bad port: " + e.message.split("\n")[0, 2].join(" | ")
+end
