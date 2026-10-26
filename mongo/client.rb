@@ -20,6 +20,9 @@ module Mongo
     # shared is internal: Client#use passes its Server so the new client
     # shares the connection.
     def initialize(hosts, options = {}, shared = nil)
+      if hosts.is_a?(String)
+        raise ArgumentError, "spinel-mongo doesn't read URI strings yet; give the server as [\"host:port\"]"
+      end
       if hosts.length != 1
         raise ArgumentError, "spinel-mongo connects to one server; give one \"host:port\", not " +
                              hosts.length.to_s
