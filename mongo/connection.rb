@@ -251,12 +251,29 @@ module Mongo
 
     # Sends one request and reads until the reply to it is whole.
     def round_trip(body, seq_id, docs)
+      check_open
+      id = @next_id
+      @next_id += 1
+      exchange(id, Mongo::Wire.op_msg(id, body, seq_id, docs))
+    end
+
+    # round_trip with the kind 1 documents already encoded. The reply is
+    # returned as it is, failed or not, for the caller to read.
+    def round_trip_encoded(body, seq_id, encoded_docs)
+      check_open
+      id = @next_id
+      @next_id += 1
+      exchange(id, Mongo::Wire.op_msg_encoded(id, body, seq_id, encoded_docs))
+    end
+
+    def check_open
       if @closed
         raise Mongo::Error::SocketError, "The connection to " + @address + " is closed"
       end
-      id = @next_id
-      @next_id += 1
-      request = Mongo::Wire.op_msg(id, body, seq_id, docs)
+      nil
+    end
+
+    def exchange(id, request)
       begin
         @transport.write(request)
         until @parser.try_next

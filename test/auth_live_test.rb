@@ -4,9 +4,9 @@
 # chosen and negotiated, what the server says each user is, and each
 # refusal: a wrong password, the wrong authSource, SCRAM-SHA-256 for a
 # user without it, a command before any login, and a user outside its
-# role. Spinel-only (the committed .expected keeps spin test from running
-# it under CRuby); oracle/auth_live.rb runs the same flow through the
-# mongo gem.
+# role. Then logins through Mongo::Client's options. Spinel-only (the
+# committed .expected keeps spin test from running it under CRuby);
+# oracle/auth_live.rb runs the same flow through the mongo gem.
 require "mongo"
 require_relative "support/live_mongod"
 
@@ -82,5 +82,20 @@ rescue Mongo::Error::OperationFailure => e
   puts "no login: " + e.class.to_s + " " + e.message + " code=" + e.code.to_s
 end
 c.close
+
+client = Mongo::Client.new(["127.0.0.1:" + PORT.to_s], database: "auth_live", user: "legacy", password: "older pass",
+                                auth_source: "admin")
+puts "client as legacy: " + client[:locomotives].find("_id" => 1).first["name"] + ", count " +
+     client[:locomotives].count_documents.to_s
+client.close
+client = Mongo::Client.new(["127.0.0.1:" + PORT.to_s], database: "auth_live", user: "app", password: "wrong pass",
+                                auth_source: "admin", auth_mech: :scram256)
+begin
+  client[:locomotives].count_documents
+  puts "client with a wrong password: no error"
+rescue Mongo::Auth::Unauthorized => e
+  puts "client with a wrong password: " + e.class.to_s + " " + e.message
+end
+client.close
 
 live_mongod_stop("auth")

@@ -205,6 +205,16 @@ module Mongo
       end
     end
 
+    # A document larger than the server's maxBsonObjectSize, refused
+    # before anything is sent.
+    class MaxBSONSize < Error
+      MESSAGE = "The document exceeds maximum allowed BSON size"
+
+      def initialize(msg = MESSAGE)
+        super(msg)
+      end
+    end
+
     # The gem's base for authentication errors. It is a RuntimeError, not
     # a Mongo::Error, so `rescue Mongo::Error` doesn't catch it.
     class AuthError < RuntimeError
@@ -264,6 +274,19 @@ module Mongo
   end
 
   module Auth
+    # Credentials the driver can't use, found before connecting.
+    class InvalidConfiguration < Mongo::Error::AuthError
+    end
+
+    # An auth_mech other than :scram256 and :scram, the two this driver
+    # has. The gem's message lists its own mechanisms; this one lists
+    # these two.
+    class InvalidMechanism < InvalidConfiguration
+      def initialize(mechanism)
+        super(mechanism + " is invalid, please use one of the following mechanisms: :scram, :scram256")
+      end
+    end
+
     # The server refused the credentials, or a SCRAM step failed on its
     # side. code is the server's, or nil.
     class Unauthorized < Mongo::Error::AuthError

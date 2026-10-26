@@ -28,3 +28,13 @@ in the same pull request as the change.
   the mechanism as the gem does. The gem's `Mongo::Auth::Unauthorized`,
   `InvalidNonce`, `InvalidSignature`, `InsufficientIterationCount`,
   `MissingScramServerSignature` and `InvalidServerAuthResponse`.
+- The client and collection API: `Mongo::Client.new(["host:port"],
+  options)` with `[]`, `database`, `use` and `close`; `Database#command`,
+  `#[]` and `#collection_names`; `Collection#find`, `insert_one`,
+  `insert_many` (batched by the server's limits), `update_one`,
+  `update_many`, `replace_one`, `delete_one`, `delete_many`,
+  `count_documents`, `estimated_document_count`, `distinct` and `drop`;
+  `Collection::View` with `sort`, `limit`, `skip`, `projection`,
+  `batch_size`, `each`, `first`, `to_a` and `count_documents`, over
+  cursors that send `getMore` and close themselves with `killCursors`.
+  The gem's result classes and `Mongo::Error::MaxBSONSize`.

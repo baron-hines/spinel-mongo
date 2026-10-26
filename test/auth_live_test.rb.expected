@@ -9,3 +9,5 @@ wrong password, SCRAM-SHA-1: Mongo::Auth::Unauthorized User app (mechanism: scra
 wrong authSource: Mongo::Auth::Unauthorized User app (mechanism: scram) is not authorized to access auth_live (auth source: auth_live, used mechanism: SCRAM-SHA-1): [18:AuthenticationFailed]: Authentication failed. code=18
 legacy asked for SCRAM-SHA-256: Mongo::Auth::Unauthorized User legacy (mechanism: scram256) is not authorized to access auth_live (auth source: admin, used mechanism: SCRAM-SHA-256): [334:MechanismUnavailable]: Unable to use SCRAM-SHA-256 based authentication for user without any SCRAM-SHA-256 credentials registered code=334
 no login: Mongo::Error::OperationFailure [13:Unauthorized]: Command find requires authentication code=13
+client as legacy: Big Boy, count 1
+client with a wrong password: Mongo::Auth::Unauthorized User app (mechanism: scram256) is not authorized to access auth_live (auth source: admin, used mechanism: SCRAM-SHA-256): [18:AuthenticationFailed]: Authentication failed.

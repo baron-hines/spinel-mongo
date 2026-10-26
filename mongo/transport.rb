@@ -66,3 +66,20 @@ module Mongo
     end
   end
 end
+
+module Mongo
+  # Opens a Mongo::Transport for Mongo::Server. Client#default_connector
+  # is defined here, with the transport, so the rest of the client runs
+  # under CRuby too, where tests define their own.
+  class Connector
+    def open(host, port, connect_timeout, socket_timeout)
+      Mongo::Transport.new(host, port, connect_timeout, socket_timeout)
+    end
+  end
+
+  class Client
+    def default_connector
+      Mongo::Connector.new
+    end
+  end
+end

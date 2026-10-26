@@ -45,6 +45,36 @@ module Mongo
       enc.bytes
     end
 
+    # The same request with its kind 1 documents already encoded, so a
+    # caller that measured them first doesn't encode them twice.
+    def self.op_msg_encoded(request_id, body, seq_id, encoded_docs)
+      enc = BSON::Encoder.new
+      enc.int32(0)
+      enc.int32(request_id)
+      enc.int32(0)
+      enc.int32(OP_MSG)
+      enc.int32(0)
+      enc.byte(0)
+      enc.document(body)
+      if encoded_docs.length > 0
+        enc.byte(1)
+        start = enc.size
+        enc.int32(0)
+        enc.cstring(seq_id)
+        encoded_docs.each { |d| enc.raw(d) }
+        enc.patch_length(start)
+      end
+      enc.patch_length(0)
+      enc.bytes
+    end
+
+    # The bytes op_msg_encoded adds around a request's kind 1 documents:
+    # the header, the flags, both section kinds, the kind 1 size and its
+    # identifier. body_size is the encoded command's size.
+    def self.overhead(body_size, seq_id)
+      HEADER_SIZE + 4 + 1 + body_size + 1 + 4 + seq_id.bytesize + 1
+    end
+
     class Parser
       def initialize(max_message_size = MAX_MESSAGE_SIZE)
         @max = max_message_size

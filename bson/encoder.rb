@@ -42,6 +42,25 @@ module BSON
       nil
     end
 
+    # A document with one more element, `_id`, written after the rest:
+    # what the gem sends for a document inserted without an _id, without
+    # building a new Hash for it.
+    def document_with_id(doc, id)
+      start = @buf.bytesize
+      @buf << "\x00\x00\x00\x00".b
+      doc.each { |k, v| element(k.to_s, v) }
+      element("_id", id)
+      @buf << "\x00".b
+      patch_length(start)
+      nil
+    end
+
+    # Bytes already encoded, such as a document from BSON.encode.
+    def raw(bytes)
+      @buf << bytes
+      nil
+    end
+
     def array(list)
       start = @buf.bytesize
       @buf << "\x00\x00\x00\x00".b
