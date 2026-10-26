@@ -14,10 +14,9 @@ It is built like its siblings
 client core over an injected transport (so the same tests run under CRuby
 and compiled), and a thin transport over Spinel's `sp_net` sockets.
 
-**Status: not released yet.** BSON, the wire layer, the connection,
-SCRAM, the client and collection API, `mongodb://` URIs, threads and
-forks are in, for one server. What remains before v0.1.0 is the release
-itself.
+**Status: v0.1.0.** BSON, the wire layer, the connection, SCRAM, the
+client and collection API, `mongodb://` URIs, threads and forks, for one
+server. TLS and seed lists of several hosts come in v0.2.0.
 
 ```ruby
 require "mongo"
@@ -42,7 +41,7 @@ spinel $(spin flags) -I . examples/quickstart.rb -o build/quickstart
 MONGODB_URI=mongodb://127.0.0.1:27017/examples build/quickstart
 ```
 
-## Planned
+## Releases
 
 v0.1.0, one server, given as a URI or as `["host:port"]`:
 
@@ -57,7 +56,7 @@ v0.1.0, one server, given as a URI or as `["host:port"]`:
 - One connection per client, shared by threads a round trip at a time,
   and a new one in a forked child.
 
-v0.2.0: TLS through Spinel's bundled `openssl` package (behind
+v0.2.0, planned: TLS through Spinel's bundled `openssl` package (behind
 `require "mongo/tls"`, so programs without TLS don't link libssl), and
 seed lists of several hosts.
 
@@ -67,7 +66,7 @@ aggregation, and more. The full list is in
 
 ## Installing
 
-Once a release is tagged, depend on it by tag in `spin.toml`:
+Depend on a release by its tag in `spin.toml`:
 
 ```toml
 [dependencies]

@@ -6,6 +6,11 @@ in the same pull request as the change.
 
 ## Unreleased
 
+## 0.1.0
+
+The first release: one server, as a URI or `["host:port"]`.
+
+
 - The package skeleton: `spin.toml`, `Mongo::VERSION`, one dual-runtime
   test, and CI.
 - The oracle harness, `oracle/run.sh`, with its first flow (`crud_live`).
