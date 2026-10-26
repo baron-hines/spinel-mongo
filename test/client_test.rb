@@ -233,6 +233,18 @@ end
 puts "next command ok=" + coll.database.command(ping: 1).ok?.to_s + " opens=" + m.opens.length.to_s
 coll.client.close
 puts "after close ok=" + coll.database.command(ping: 1).ok?.to_s + " opens=" + m.opens.length.to_s
+m.restart
+puts "after a restart ok=" + coll.database.command(ping: 1).ok?.to_s + " opens=" + m.opens.length.to_s
+cursor_coll = coll.client[:numbers]
+cursor_coll.insert_many([{ "_id" => 1 }, { "_id" => 2 }, { "_id" => 3 }])
+begin
+  cursor_coll.find.batch_size(1).each do |d|
+    m.restart if d["_id"] == 1
+  end
+rescue Mongo::Error::SocketError => e
+  failure("a restart under an open cursor", e)
+end
+puts "next command ok=" + coll.database.command(ping: 1).ok?.to_s + " opens=" + m.opens.length.to_s
 
 puts "-- URIs"
 m = FakeMongod.new(16 * 1024 * 1024, 48_000_000, 100_000)

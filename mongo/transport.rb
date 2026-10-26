@@ -57,6 +57,17 @@ module Mongo
       chunk
     end
 
+    # Whether the server has closed the connection, found without
+    # waiting: a read with no deadline left that finds nothing to read
+    # means it is open. Called only between round trips, so a byte read
+    # here is one nothing asked for, and the connection is no good.
+    def peer_closed?
+      return true if @fd < 0
+      chunk = MongoSock.sp_net_recv_some_timeout(@fd, 1, 0.0)
+      return false if chunk.bytesize == 0 && MongoSock.sp_net_take_recv_timeout == 1
+      true
+    end
+
     def close
       if @fd >= 0
         MongoSock.sp_net_close(@fd)

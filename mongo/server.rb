@@ -4,6 +4,12 @@
 # breaks. Clients made with Client#use share their Server, so they share
 # the connection, as the gem's share their cluster.
 #
+# A Mutex guards opening the connection, so threads that share a client
+# share one connection. Before each use the connection is checked: one
+# the server has closed since its last reply (a restart, an idle
+# timeout) is replaced before anything is sent on it, and so is one
+# inherited across a fork, whose socket belongs to the parent.
+#
 # Connecting goes through a connector duck, open(host, port,
 # connect_timeout, socket_timeout), which returns a transport. On Spinel
 # that is Mongo::Connector, in mongo/transport.rb; tests pass their own.
@@ -25,6 +31,8 @@ module Mongo
       @auth_source = auth_source
       @mechanism = mechanism
       @connection = nil
+      @lock = Mutex.new
+      @pid = Process.pid
     end
 
     # "host:port".
@@ -36,20 +44,35 @@ module Mongo
     # one broke. A failed handshake or login raises, and the next call
     # tries again.
     def connection
-      c = @connection
-      return c if !c.nil? && !c.closed?
-      transport = @connector.open(@host, @port, @connect_timeout, @socket_timeout)
-      c = Mongo::Connection.new(transport, address)
-      c.handshake(@app_name, @user == "" ? "" : @auth_source + "." + @user)
-      c.authenticate(@user, @password, @database, @auth_source, @mechanism) if @user != ""
-      @connection = c
-      c
+      @lock.lock
+      begin
+        c = @connection
+        # After a fork, closing the child's copy of the socket sends
+        # nothing, so the parent's connection is left as it was.
+        c.close if !c.nil? && (@pid != Process.pid || c.stale?)
+        return c if !c.nil? && !c.closed?
+        @connection = nil
+        @pid = Process.pid
+        transport = @connector.open(@host, @port, @connect_timeout, @socket_timeout)
+        c = Mongo::Connection.new(transport, address)
+        c.handshake(@app_name, @user == "" ? "" : @auth_source + "." + @user)
+        c.authenticate(@user, @password, @database, @auth_source, @mechanism) if @user != ""
+        @connection = c
+        c
+      ensure
+        @lock.unlock
+      end
     end
 
     def close
-      c = @connection
-      c.close unless c.nil?
-      @connection = nil
+      @lock.lock
+      begin
+        c = @connection
+        c.close unless c.nil?
+        @connection = nil
+      ensure
+        @lock.unlock
+      end
       nil
     end
   end

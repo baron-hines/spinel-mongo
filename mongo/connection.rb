@@ -1,7 +1,8 @@
 # One connection to a server, over a transport duck: write(bytes),
-# read_some(max), which returns "" once the server has closed it, and
-# close. Mongo::Transport is the real one; tests pass a scripted one, so
-# this file runs under both runtimes.
+# read_some(max), which returns "" once the server has closed it,
+# peer_closed?, which says without blocking whether it has, and close.
+# Mongo::Transport is the real one; tests pass a scripted one, so this
+# file runs under both runtimes.
 #
 # handshake sends hello and keeps the server's limits. command and
 # command_seq send one command, wait for the reply that answers it,
@@ -10,6 +11,9 @@
 # raises SocketError: the caller opens a new one. Nothing is retried,
 # since a write may have reached the server. authenticate logs in with
 # SCRAM after the handshake.
+#
+# A Mutex holds each request and its reply together, so threads that
+# share the connection take turns a round trip at a time.
 require "bson"
 require "mongo/version"
 require "mongo/errors"
@@ -28,6 +32,7 @@ module Mongo
       @parser = Mongo::Wire::Parser.new
       @next_id = 1
       @closed = false
+      @lock = Mutex.new
       @hello = BSON::Document.new
       @max_wire_version = 0
       @max_bson_object_size = 16 * 1024 * 1024
@@ -241,7 +246,19 @@ module Mongo
       payload.data.dup.force_encoding("UTF-8")
     end
 
+    # Closes the connection once no round trip is under way on it, so a
+    # thread waiting for its reply never has the socket closed under it.
     def close
+      @lock.lock
+      begin
+        drop
+      ensure
+        @lock.unlock
+      end
+    end
+
+    # close, for a round trip that holds the lock already.
+    def drop
       unless @closed
         @closed = true
         @transport.close
@@ -249,21 +266,44 @@ module Mongo
       nil
     end
 
+    # Whether the connection can't take another request: it is closed,
+    # or the server has closed its end (or sent bytes nothing asked for)
+    # since the last reply. Checked under the lock, so it never reads
+    # while a reply is on its way.
+    def stale?
+      @lock.lock
+      begin
+        @closed || @transport.peer_closed?
+      ensure
+        @lock.unlock
+      end
+    end
+
     # Sends one request and reads until the reply to it is whole.
     def round_trip(body, seq_id, docs)
-      check_open
-      id = @next_id
-      @next_id += 1
-      exchange(id, Mongo::Wire.op_msg(id, body, seq_id, docs))
+      @lock.lock
+      begin
+        check_open
+        id = @next_id
+        @next_id += 1
+        exchange(id, Mongo::Wire.op_msg(id, body, seq_id, docs))
+      ensure
+        @lock.unlock
+      end
     end
 
     # round_trip with the kind 1 documents already encoded. The reply is
     # returned as it is, failed or not, for the caller to read.
     def round_trip_encoded(body, seq_id, encoded_docs)
-      check_open
-      id = @next_id
-      @next_id += 1
-      exchange(id, Mongo::Wire.op_msg_encoded(id, body, seq_id, encoded_docs))
+      @lock.lock
+      begin
+        check_open
+        id = @next_id
+        @next_id += 1
+        exchange(id, Mongo::Wire.op_msg_encoded(id, body, seq_id, encoded_docs))
+      ensure
+        @lock.unlock
+      end
     end
 
     def check_open
@@ -284,11 +324,11 @@ module Mongo
           @parser.feed(chunk)
         end
       rescue Mongo::Error => e
-        close
+        drop
         raise e
       end
       if @parser.response_to != id
-        close
+        drop
         raise Mongo::Error::UnexpectedResponse.new(id, @parser.response_to)
       end
       @parser.document

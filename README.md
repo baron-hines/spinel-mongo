@@ -15,14 +15,13 @@ client core over an injected transport (so the same tests run under CRuby
 and compiled), and a thin transport over Spinel's `sp_net` sockets.
 
 **Status: not released yet.** BSON, the wire layer, the connection,
-SCRAM and the client and collection API are in, for a server given as
-`["host:port"]`. URI strings, threads and forks arrive before v0.1.0.
+SCRAM, the client and collection API, `mongodb://` URIs, threads and
+forks are in, for one server. What remains before v0.1.0 is release work.
 
 ```ruby
 require "mongo"
 
-client = Mongo::Client.new(["127.0.0.1:27017"], database: "railyard",
-                           user: "app", password: "secret", auth_source: "admin")
+client = Mongo::Client.new("mongodb://app:secret@127.0.0.1:27017/railyard?authSource=admin")
 locos = client[:locomotives]
 id = locos.insert_one({ "name" => "Big Boy", "wheels" => 24 }).inserted_id
 locos.find({ "wheels" => { "$gt" => 12 } }).sort({ "wheels" => -1 }).limit(5).each do |doc|
@@ -34,8 +33,7 @@ locos.count_documents({ "retired" => true })   # => 1
 
 ## Planned
 
-v0.1.0, one server, also from a URI:
-`Mongo::Client.new("mongodb://app:secret@127.0.0.1:27017/railyard")`.
+v0.1.0, one server, given as a URI or as `["host:port"]`:
 
 - BSON: double, string, document, array, binary, ObjectId, boolean, UTC
   datetime, null, int32, int64, byte-identical to the bson gem.
@@ -45,6 +43,8 @@ v0.1.0, one server, also from a URI:
   `replace_one`, `delete_one`/`delete_many`, `count_documents`,
   `estimated_document_count`, `distinct`, `drop`, `Database#command`.
 - The gem's error classes, with the server's code and code name.
+- One connection per client, shared by threads a round trip at a time,
+  and a new one in a forked child.
 
 v0.2.0: TLS through Spinel's bundled `openssl` package (behind
 `require "mongo/tls"`, so programs without TLS don't link libssl), and
@@ -100,6 +100,10 @@ byte, since the gem adds a session id that this driver doesn't send.
 | `crud_live` | Through `Mongo::Client`: `insert_many`, a find in batches of one, `count_documents`, `update_one`, `delete_one`, a duplicate key, an unknown command and a read back |
 | `cursors_live` | 250 documents read in batches of 100 (the `getMore`s counted by `serverStatus`), sort with skip and limit, a limit past the first batch, `first`, projection, `count_documents` with and without skip and limit, `estimated_document_count`, `distinct`, the update and delete results, `collection_names` and `drop` |
 | `bulk_live` | `insert_many` of 120,000 documents in two insert commands, ordered and unordered duplicate keys raising `BulkWriteError` with the gem's message and result, and the 16 MiB limit to the byte |
+| `uri` | 51 connection strings read as the gem's `Mongo::URI` reads them: hosts, percent-decoded credentials and database, the options the driver uses, and the gem's `InvalidURI` messages |
+| `threads_live` | Eight threads insert 1,000 documents each through one client, beside a CPU-bound thread; every insert lands once |
+| `fork_live` | A parent connects, then two forked workers write through the client they inherited, each on its own new connection, and the parent's connection still works after them |
+| `restart_live` | The server restarts between two commands and the second succeeds; while it is down a command raises `NoServerAvailable`, and once it is back the next succeeds |
 
 `test/bson_values_test.rb` is dual-runtime: ObjectId generation, the
 value classes, Document, number and string round trips, and the left-out
@@ -115,7 +119,10 @@ the server side of SCRAM. And `test/client_test.rb`: the client,
 database, collection, view and cursor against a pretend `mongod` with
 small limits, with the commands each method sends, `insert_many` split by
 batch and message size, cursors closed after a limit or a `break`, write
-errors, and a connection opened again after it breaks.
+errors, a connection opened again after it breaks or the server
+restarts, and clients made from URI strings. And
+`test/object_id_threads_test.rb`: 160,000 ObjectIds drawn by eight
+threads at once, all distinct.
 
 `test/timeouts_live_test.rb` checks that `connect_timeout` and
 `socket_timeout` give up within a second of their setting, against
@@ -220,13 +227,29 @@ them on purpose, is in [UNPLANNED_FEATURES.md](UNPLANNED_FEATURES.md).
 
 **Client and collections**
 
-- `Mongo::Client.new` takes one server as `["host:port"]`, with the
-  options `database`, `user`, `password`, `auth_source`, `auth_mech`
-  (`:scram256` or `:scram`), `app_name`, `connect_timeout` and
-  `socket_timeout`. Its other options are ignored. URI strings come with
-  the next release.
-- One connection per client, opened on first use and opened again for
-  the next command after it breaks. Clients made with `use` share it.
+- `Mongo::Client.new` takes one server, as a `mongodb://` URI or as
+  `["host:port"]`, with the options `database`, `user`, `password`,
+  `auth_source`, `auth_mech` (`:scram256` or `:scram`), `app_name`,
+  `connect_timeout` and `socket_timeout`. Options given beside a URI
+  override its own, as in the gem. The gem's other options are ignored.
+- A URI is read as the gem reads it, with the gem's `InvalidURI`
+  messages. Of its options, `authSource`, `authMechanism`, `appName`,
+  `connectTimeoutMS`, `socketTimeoutMS`, `directConnection`, `tls` and
+  `ssl` are read and the rest are skipped, without the gem's logged
+  warning for ones it doesn't know. `mongodb+srv://` raises `InvalidURI`
+  saying it isn't read yet. Several hosts, `tls=true` and a UNIX socket
+  path raise `ArgumentError`.
+- The gem's checks on credentials are made before connecting, with its
+  messages: a mechanism without a user or password, an empty user or
+  `authSource`.
+- One connection per client, opened on first use. Clients made with
+  `use` share it, and threads share it a round trip at a time, under a
+  `Mutex`; the gem gives each thread a connection from its pool. A
+  connection the server has closed since its last reply (a restart, an
+  idle timeout) is found before anything is sent on it and replaced, so
+  the command goes through; the gem retries the command instead. A
+  forked child opens its own connection on first use, leaving the
+  parent's alone.
 - `Database` has `command`, `[]` and `collection_names`. `Collection` has
   `find`, `insert_one`, `insert_many`, `update_one`, `update_many`,
   `replace_one`, `delete_one`, `delete_many`, `count_documents`,
@@ -276,6 +299,17 @@ Spinel behaviors the code works around, with the issue where there is one.
   other values read back as `nil` compiled. `insert_many` chooses each
   `_id` in one method (`Collection.id_or_new`) so its Array keeps them
   all.
+- Threads run in parallel, with no global lock, so state that threads
+  share needs a `Mutex` even for one read and one write. The ObjectId
+  counter has one; without it, eight threads drawing ids at once repeated
+  about 4% of them.
+- A class method named `merge` that takes two arguments is called with
+  one once compiled, and raises `ArgumentError`. The client's method that
+  lays a URI's options under the program's is named `layer`.
+- A block parameter that `Thread.new` passes (`Thread.new(n) { |n| ... }`),
+  put in a Hash literal that goes to a method, is refused at compile
+  time. A value captured from an enclosing block works, as in
+  `[0, 1].each { |n| Thread.new { coll.insert_one({ "n" => n }) } }`.
 
 ## License
 
