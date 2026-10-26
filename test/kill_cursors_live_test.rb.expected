@@ -1,0 +1,6 @@
+open at the start 0
+break after 15 of 50 in batches of 10: open 0
+a block that raised stop: open 0
+first with batch_size 10: _id 0, open 0
+limit 15 in batches of 10: 15, open 0
+all 50: 50, open 0

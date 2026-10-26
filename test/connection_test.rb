@@ -33,6 +33,12 @@ class ScriptedTransport
     chunk
   end
 
+  # Closed once every scripted reply has been read, unless it is
+  # scripted to time out instead.
+  def peer_closed?
+    @i >= @chunks.length && !@time_out
+  end
+
   def close
     @closes += 1
     nil
@@ -254,3 +260,12 @@ puts "closed=" + c.closed?.to_s
 c.close
 c.close
 puts "close twice: transport closes=" + t.closes.to_s
+
+puts "-- stale connections"
+t, c = connected([reply(2, { "ok" => 1.0 })])
+puts "a reply still to come: stale=" + c.stale?.to_s
+c.command({ "ping" => 1, "$db" => "admin" })
+puts "the server's end closed: stale=" + c.stale?.to_s + " closed=" + c.closed?.to_s
+t, c = connected([])
+c.close
+puts "closed by the client: stale=" + c.stale?.to_s

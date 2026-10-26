@@ -14,8 +14,8 @@ Gaps that do have a plan are not listed here. They are at the end, under
 from the code as it stands today, planned or not.
 
 The driver is still being built. Where an entry describes how the driver
-behaves in a part that hasn't landed yet (the connection, auth, the
-collection API), it describes the design that part is being built to.
+behaves in a part that hasn't landed yet (TLS, seed lists), it describes
+the design that part is being built to.
 
 ## Sessions and transactions
 
@@ -146,6 +146,12 @@ collection API), it describes the design that part is being built to.
     no such mode. It talks to one server, or (from v0.2.0) to the primary
     of a seed list.
 
+- **UNIX domain sockets.**
+  - **A socket path as the host.** The gem connects to
+    `/tmp/mongodb-27017.sock`, given as is or percent-encoded in a URI.
+    This driver reads such a URI as the gem does, but connects only over
+    TCP, and raises `ArgumentError` for a socket path.
+
 - **Compression.**
   - **`compressors`.** The gem can compress messages on the wire with
     zlib, snappy or zstd (`compressors: ["zstd"]`, or `compressors=` in the
@@ -230,9 +236,6 @@ collection API), it describes the design that part is being built to.
   - **JavaScript code, with or without scope** (`BSON::Code`,
     `BSON::CodeWithScope`). Server-side JavaScript functions stored as
     values. The server has deprecated the scoped form.
-  - **Timestamp** (`BSON::Timestamp`). The server's internal replication
-    timestamp, seen in the oplog and in some command replies. It isn't
-    meant for application data; use a UTC datetime (Ruby's `Time`).
   - **MinKey and MaxKey** (`BSON::MinKey`, `BSON::MaxKey`). Values that
     compare lower and higher than every other value, used mostly in
     sharding ranges.
@@ -298,7 +301,11 @@ collection API), it describes the design that part is being built to.
 These are missing today and have a plan, so they aren't listed above:
 
 - TLS (behind `require "mongo/tls"`) and seed lists of several hosts, in
-  v0.2.0.
+  v0.2.0. Seed lists bring `BSON::Timestamp` with them, since every reply
+  from a replica set member carries timestamps (`operationTime` and
+  `$clusterTime`). Until then, a document holding one raises
+  `BSON::Error::UnsupportedType`, and so does `serverStatus` unless it is
+  asked without its `storageEngine` and `wiredTiger` sections.
 - Decimal128 and BSON regular expressions, `find_one_and_update` and the
   other `findAndModify` helpers, and `bulk_write`, once an application
   needs them.

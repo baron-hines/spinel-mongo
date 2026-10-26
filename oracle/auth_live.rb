@@ -3,8 +3,9 @@
 # with a throwaway --dbpath under build/oracle/, and stops it at the end.
 # Two notes on the gem's messages are cut before printing, since this
 # driver's messages don't carry them (see the README's ledger): the
-# server an Unauthorized came from (", used server: ...") and where an
-# OperationFailure happened (" (on ...)").
+# server an Unauthorized came from (", used server: ..."), with the
+# retry note a client operation adds (" (modern retry, attempt 1)"), and
+# where an OperationFailure happened (" (on ...)").
 require "mongo"
 Mongo::Logger.logger.level = Logger::FATAL
 
@@ -13,7 +14,7 @@ def strip_note(message)
 end
 
 def strip_server(message)
-  message.sub(/, used server: [^ ]+ \([A-Za-z]+\)\)/, ")")
+  message.sub(/, used server: [^ ]+ \([A-Za-z]+\)\)/, ")").sub(/ \((modern|legacy) retry, attempt \d+\)\z/, "")
 end
 
 port = (ARGV.length > 0 ? ARGV[0].to_i : 27217) + 1
@@ -106,3 +107,21 @@ rescue Mongo::Error::OperationFailure => e
   puts "no login: " + e.class.to_s + " " + strip_note(e.message) + " code=" + e.code.to_s
 end
 c.close
+
+client = Mongo::Client.new(HOST, database: "auth_live", user: "legacy", password: "older pass",
+                                auth_source: "admin")
+puts "client as legacy: " + client[:locomotives].find("_id" => 1).first["name"] + ", count " +
+     client[:locomotives].count_documents.to_s
+client.close
+client = Mongo::Client.new(HOST, database: "auth_live", user: "app", password: "wrong pass",
+                                auth_source: "admin", auth_mech: :scram256)
+begin
+  client[:locomotives].count_documents
+  puts "client with a wrong password: no error"
+rescue Mongo::Auth::Unauthorized => e
+  puts "client with a wrong password: " + e.class.to_s + " " + strip_server(e.message)
+end
+client.close
+client = Mongo::Client.new("mongodb://app:s3cret%20pass@" + HOST[0] + "/auth_live?authSource=admin&appName=auth_live")
+puts "client from a URI: " + client.database.name + ", count " + client[:locomotives].count_documents.to_s
+client.close

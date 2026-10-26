@@ -1,0 +1,5 @@
+before: count 1
+after a restart: count 1
+a write after it: count 2
+server down: Mongo::Error::NoServerAvailable
+back up: count 2

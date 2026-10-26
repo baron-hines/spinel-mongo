@@ -6,23 +6,32 @@ module BSON
     # 4 bytes of big-endian seconds, 5 random bytes fixed per process
     # (drawn again when Process.pid changes, so a forked child never
     # repeats its parent's ids), and a 3-byte big-endian counter that
-    # starts at a random value and wraps at 2**24.
+    # starts at a random value and wraps at 2**24. A Mutex keeps threads
+    # from taking the same count: Spinel's threads run in parallel, with
+    # no lock around a read and a write of @counter.
     class Generator
       def initialize
         @pid = -1
         @random = "".b
         @counter = 0
+        @lock = Mutex.new
       end
 
       def next_bytes(seconds)
-        if @pid != Process.pid
-          @pid = Process.pid
-          @random = SecureRandom.random_bytes(5).b
-          @counter = SecureRandom.random_number(16777216)
+        @lock.lock
+        begin
+          if @pid != Process.pid
+            @pid = Process.pid
+            @random = SecureRandom.random_bytes(5).b
+            @counter = SecureRandom.random_number(16777216)
+          end
+          c = @counter
+          @counter = (@counter + 1) % 16777216
+          random = @random
+        ensure
+          @lock.unlock
         end
-        c = @counter
-        @counter = (@counter + 1) % 16777216
-        [seconds].pack("N") + @random + [(c >> 16) & 0xff, (c >> 8) & 0xff, c & 0xff].pack("C*")
+        [seconds].pack("N") + random + [(c >> 16) & 0xff, (c >> 8) & 0xff, c & 0xff].pack("C*")
       end
 
       # Tests set the counter to see it wrap.

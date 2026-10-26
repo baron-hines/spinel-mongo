@@ -28,3 +28,19 @@ in the same pull request as the change.
   the mechanism as the gem does. The gem's `Mongo::Auth::Unauthorized`,
   `InvalidNonce`, `InvalidSignature`, `InsufficientIterationCount`,
   `MissingScramServerSignature` and `InvalidServerAuthResponse`.
+- The client and collection API: `Mongo::Client.new(["host:port"],
+  options)` with `[]`, `database`, `use` and `close`; `Database#command`,
+  `#[]` and `#collection_names`; `Collection#find`, `insert_one`,
+  `insert_many` (batched by the server's limits), `update_one`,
+  `update_many`, `replace_one`, `delete_one`, `delete_many`,
+  `count_documents`, `estimated_document_count`, `distinct` and `drop`;
+  `Collection::View` with `sort`, `limit`, `skip`, `projection`,
+  `batch_size`, `each`, `first`, `to_a` and `count_documents`, over
+  cursors that send `getMore` and close themselves with `killCursors`.
+  The gem's result classes and `Mongo::Error::MaxBSONSize`.
+- Connection strings: `Mongo::URI`, which reads `mongodb://` URIs as the
+  gem does, and `Mongo::Client.new(uri, options)`, with the gem's
+  `Mongo::Error::InvalidURI` and its checks on credentials.
+- Threads and forks: threads share a client's connection a round trip at
+  a time, a forked child opens its own, and a connection the server has
+  closed since its last reply is replaced before it is used.

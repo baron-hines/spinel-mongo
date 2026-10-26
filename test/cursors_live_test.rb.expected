@@ -1,0 +1,16 @@
+inserted 250
+batch_size 100: 250 documents, sum 31125, getMores 2
+sort -1, skip 10, limit 25: 25 from 239 to 215
+limit 150, batch_size 100: 150, getMores 1
+first of group 3: n=3, of group 9: nil
+projection: group group=2
+count_documents all 250, group 1 50, skip 10 limit 20 20, group 1 skip 45 5, none 0
+estimated_document_count 250
+distinct group [0, 1, 2, 3, 4], where n < 3 [0, 1, 2]
+update_many matched 50 modified 50
+again matched 50 modified 0
+upsert matched 0 upserted_id 1000 upserted_count 1
+replace_one matched 1 modified 1 now _id,n
+delete_one 1, delete_many 49, left 201
+collection_names other,readings
+drop true, names other
