@@ -16,7 +16,8 @@ and compiled), and a thin transport over Spinel's `sp_net` sockets.
 
 **Status: not released yet.** BSON, the wire layer, the connection,
 SCRAM, the client and collection API, `mongodb://` URIs, threads and
-forks are in, for one server. What remains before v0.1.0 is release work.
+forks are in, for one server. What remains before v0.1.0 is the release
+itself.
 
 ```ruby
 require "mongo"
@@ -29,6 +30,16 @@ locos.find({ "wheels" => { "$gt" => 12 } }).sort({ "wheels" => -1 }).limit(5).ea
 end
 locos.update_one({ "_id" => id }, { "$set" => { "retired" => true } })
 locos.count_documents({ "retired" => true })   # => 1
+```
+
+`examples/` has whole programs: [`quickstart.rb`](examples/quickstart.rb)
+(writes, queries, updates, deletes and a server error) and
+[`threads.rb`](examples/threads.rb) (threads sharing one client). Each
+reads `MONGODB_URI` and runs compiled or under CRuby with the gem:
+
+```sh
+spinel $(spin flags) -I . examples/quickstart.rb -o build/quickstart
+MONGODB_URI=mongodb://127.0.0.1:27017/examples build/quickstart
 ```
 
 ## Planned
@@ -72,6 +83,7 @@ changed.
 ```sh
 spin test        # every test, compiled; some under CRuby too
 sh oracle/run.sh # every flow with a twin, through the real gems
+sh examples/run.sh # every example, compiled and through the gem
 ```
 
 Tests with no committed `.expected` snapshot run compiled and under CRuby,
@@ -132,6 +144,11 @@ server selection loop. `test/kill_cursors_live_test.rb` checks that a
 cursor left early (a `break`, a raise, `first`, a limit) is closed on the
 server, by `serverStatus`'s count of open cursors. It has no twin either:
 the gem closes such a cursor only when Ruby collects the cursor object.
+
+`examples/run.sh` compiles each example, runs it against a `mongod` of
+its own, runs it again under CRuby against the `mongo` gem, and diffs
+the two outputs, so the examples stay the gem's API as well as this
+driver's.
 
 Live tests start their own `mongod` (with test commands on, for
 `sleep`) on a private port with a throwaway `--dbpath` under

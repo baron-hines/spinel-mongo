@@ -3,8 +3,9 @@ name: CI
 # Builds Spinel (pinned on pushes and pull requests, master on the weekly
 # run, so a Spinel change that breaks the driver shows up early), then
 # runs `spin test`: the dual-runtime lanes compiled and under CRuby, and
-# the live lanes against throwaway mongod instances. The oracle, which
-# replays the live flows through the real mongo gem, joins in oracle/.
+# the live lanes against throwaway mongod instances. Then the oracle,
+# which replays the flows through the real gems, and the examples,
+# compiled and through the gem.
 
 on:
   pull_request:
@@ -107,6 +108,9 @@ jobs:
 
       - name: Oracle
         run: sh oracle/run.sh
+
+      - name: Examples
+        run: sh examples/run.sh
 
       - name: Upload build output
         if: failure()
