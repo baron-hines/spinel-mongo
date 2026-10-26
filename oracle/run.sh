@@ -14,7 +14,7 @@
 
 ORACLE_PORT=${ORACLE_PORT:-27217}
 OUTDIR=build/oracle
-FLOWS="bson_encode bson_decode bson_malformed wire_msg connection_live auth_live crud_live cursors_live bulk_live"
+FLOWS="bson_encode bson_decode bson_malformed wire_msg connection_live auth_live crud_live cursors_live bulk_live uri"
 
 rm -rf "$OUTDIR"
 mkdir -p "$OUTDIR/db"

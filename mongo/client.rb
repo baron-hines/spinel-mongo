@@ -1,8 +1,9 @@
-# Mongo::Client, the gem's entry point: one server, given as
-# ["host:port"], and the options a program passes it. The connection is
-# opened on first use, not here, as the gem connects in the background.
-# URI strings arrive with mongo/uri.rb.
+# Mongo::Client, the gem's entry point: one server, given as a mongodb://
+# URI or as ["host:port"], and the options a program passes it. The
+# connection is opened on first use, not here, as the gem connects in the
+# background.
 require "mongo/errors"
+require "mongo/uri"
 require "mongo/server"
 require "mongo/database"
 
@@ -17,16 +18,29 @@ module Mongo
     # (default none). The gem's other options are ignored.
     # direct_connection is always so, since there is one server.
     #
+    # A URI's options come first and options given here override them,
+    # as in the gem. The URI's hosts, user, password and database go in
+    # as the matching options.
+    #
     # shared is internal: Client#use passes its Server so the new client
     # shares the connection.
-    def initialize(hosts, options = {}, shared = nil)
-      if hosts.is_a?(String)
-        raise ArgumentError, "spinel-mongo doesn't read URI strings yet; give the server as [\"host:port\"]"
+    def initialize(addresses_or_uri, options = {}, shared = nil)
+      hosts = []
+      if addresses_or_uri.is_a?(String)
+        uri = Mongo::URI.get(addresses_or_uri)
+        hosts = uri.servers
+        options = Client.layer(uri.client_options, options)
+      else
+        addresses_or_uri.each { |a| hosts.push(a.to_s) }
       end
       if hosts.length != 1
-        raise ArgumentError, "spinel-mongo connects to one server; give one \"host:port\", not " +
-                             hosts.length.to_s
+        raise ArgumentError, "spinel-mongo connects to one server; give one host, not " + hosts.length.to_s +
+                             " (seed lists of several come in v0.2)"
       end
+      if options[:ssl] == true || options[:tls] == true
+        raise ArgumentError, "spinel-mongo doesn't do TLS yet; v0.2 adds it behind require \"mongo/tls\""
+      end
+      Client.check_auth(options)
       @hosts = hosts
       @options = options
       db = options[:database]
@@ -38,7 +52,48 @@ module Mongo
       end
     end
 
+    # Options from a URI with the program's on top. Not named merge: a
+    # class method by that name is called with one argument once compiled
+    # (Spinel 7181da6; see the README's Spinel notes).
+    def self.layer(base, over)
+      opts = {}
+      base.each { |k, v| opts[k] = v }
+      over.each { |k, v| opts[k] = v }
+      opts
+    end
+
+    # The gem's checks of the credentials, made before connecting, with
+    # its messages. A mechanism other than SCRAM's two raises
+    # InvalidMechanism.
+    def self.check_auth(options)
+      user = options[:user]
+      source = options[:auth_source]
+      mech = options[:auth_mech]
+      if mech.nil?
+        if !user.nil? && user.to_s == ""
+          raise Mongo::Auth::InvalidConfiguration, "Empty username is not supported for default auth mechanism"
+        end
+        if !source.nil? && source.to_s == ""
+          raise Mongo::Auth::InvalidConfiguration, "Auth source cannot be empty for default auth mechanism"
+        end
+        return nil
+      end
+      Client.mechanism(mech)
+      name = mech.to_s
+      raise Mongo::Auth::InvalidConfiguration, "Username is required for auth mechanism " + name if user.nil?
+      if options[:password].nil?
+        raise Mongo::Auth::InvalidConfiguration, "Password is required for auth mechanism " + name
+      end
+      if !source.nil? && source.to_s == ""
+        raise Mongo::Auth::InvalidConfiguration, "Auth source cannot be empty for auth mechanism " + name
+      end
+      nil
+    end
+
     def self.open_server(host, options, database_name, connector)
+      if host.start_with?("/") || host.end_with?(".sock")
+        raise ArgumentError, "spinel-mongo doesn't connect over UNIX domain sockets: " + host
+      end
       name = host
       port = DEFAULT_PORT
       if host.start_with?("[")
@@ -51,7 +106,7 @@ module Mongo
         colon = host.index(":")
         unless colon.nil?
           name = host[0, colon]
-          port = host[colon + 1, host.length - colon - 1].to_i
+          port = host[colon + 1, host.length - colon - 1].to_i if colon + 1 < host.length
         end
       end
       Mongo::Server.new(connector, name, port, Client.text(options[:app_name]),

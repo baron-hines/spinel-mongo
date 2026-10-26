@@ -122,3 +122,6 @@ rescue Mongo::Auth::Unauthorized => e
   puts "client with a wrong password: " + e.class.to_s + " " + strip_server(e.message)
 end
 client.close
+client = Mongo::Client.new("mongodb://app:s3cret%20pass@" + HOST[0] + "/auth_live?authSource=admin&appName=auth_live")
+puts "client from a URI: " + client.database.name + ", count " + client[:locomotives].count_documents.to_s
+client.close

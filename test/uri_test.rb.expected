@@ -1,0 +1,223 @@
+mongodb://localhost
+  servers=localhost user=nil password=nil database=admin
+  options
+mongodb://localhost:27018/railyard
+  servers=localhost:27018 user=nil password=nil database=railyard
+  options
+mongodb://flatbed:s3cret@db.example:27017/railyard?authSource=admin&authMechanism=SCRAM-SHA-256&appName=depot
+  servers=db.example:27017 user='flatbed' password='s3cret' database=railyard
+  options auth_source='admin' auth_mech=:scram256 app_name='depot'
+mongodb://us%40er:p%3Ass%2Fw%25rd@h/db
+  servers=h user='us@er' password='p:ss/w%rd' database=db
+  options
+mongodb://u:p%41ss%25@h
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://<credentials>@h
+  | User name and password must be urlencoded.
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://u:@h
+  servers=h user='u' password=nil database=admin
+  options
+mongodb://u@h/?authMechanism=scram-sha-1
+  servers=h user='u' password=nil database=admin
+  options auth_mech=:scram
+mongodb://h/?authMechanism=PLAIN
+  servers=h user=nil password=nil database=admin
+  options auth_mech=:plain
+mongodb://h/?authMechanism=FOO
+  servers=h user=nil password=nil database=admin
+  options auth_mech='FOO'
+mongodb://h/?connectTimeoutMS=2500&socketTimeoutMS=1500&directConnection=true
+  servers=h user=nil password=nil database=admin
+  options connect_timeout=2.5 socket_timeout=1.5 direct_connection=true
+mongodb://h/?connectTimeoutMS=abc&socketTimeoutMS=-5&directConnection=yes
+  servers=h user=nil password=nil database=admin
+  options
+mongodb://h/?connectTimeoutMS=12.5&socketTimeoutMS=0
+  servers=h user=nil password=nil database=admin
+  options connect_timeout=0.0125 socket_timeout=0.0
+mongodb://h/?CONNECTTIMEOUTMS=100&appname=lower&AuthSource=ext
+  servers=h user=nil password=nil database=admin
+  options auth_source='ext' app_name='lower' connect_timeout=0.1
+mongodb://h/?retryWrites=true&w=majority&replicaSet=rs0&readPreference=primary&foo=bar
+  servers=h user=nil password=nil database=admin
+  options
+mongodb://h/?tls=true
+  servers=h user=nil password=nil database=admin
+  options ssl=true
+mongodb://h/?ssl=false&tls=false
+  servers=h user=nil password=nil database=admin
+  options ssl=false
+mongodb://h/?tls=true&ssl=false
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://h/?tls=true&ssl=false
+  | all instances of 'tls' and 'ssl' must have the same value
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://h/?tls=yes
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://h/?tls=yes
+  | invalid boolean value for 'tls' or 'ssl'; only 'true' and 'false' are accepted
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://[::1]:27019/db
+  servers=[::1]:27019 user=nil password=nil database=db
+  options
+mongodb://[::1]
+  servers=[::1] user=nil password=nil database=admin
+  options
+mongodb://[fe80::1]/
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://[fe80::1]/
+  | Invalid hostname: [fe80::1]
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://a:1,b:2/db
+  servers=a:1,b:2 user=nil password=nil database=db
+  options
+mongodb://a:1,b:2/?directConnection=true
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://a:1,b:2/?directConnection=true
+  | directConnection=true cannot be used with multiple seeds
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://h/db?appName=first&appName=second
+  servers=h user=nil password=nil database=db
+  options app_name='first'
+mongodb://h?appName=noslash
+  servers=h user=nil password=nil database=admin
+  options app_name='noslash'
+mongodb://h/data%20base
+  servers=h user=nil password=nil database=data base
+  options
+mongodb://h/?&&appName=gaps&
+  servers=h user=nil password=nil database=admin
+  options app_name='gaps'
+mongodb://h/?app%4Eame=enc%20oded
+  servers=h user=nil password=nil database=admin
+  options app_name='enc oded'
+mongodb://%2Ftmp%2Fmongodb-27017.sock/db
+  servers=/tmp/mongodb-27017.sock user=nil password=nil database=db
+  options
+mongodb://h:
+  servers=h: user=nil password=nil database=admin
+  options
+mongodb://h,
+  servers=h user=nil password=nil database=admin
+  options
+
+  Mongo::Error::InvalidURI
+  | Bad URI: 
+  | Cannot parse an empty URI.
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+http://h
+  Mongo::Error::InvalidURI
+  | Bad URI: http://h
+  | Invalid scheme 'http'. Scheme must be 'mongodb' or 'mongodb+srv'
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://
+  | No hosts in the URI
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://h/a/b
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://h/a/b
+  | Database name contains an unescaped slash (/): a/b
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://h/?a=1?b=2
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://h/?a=1?b=2
+  | Options contain an unescaped question mark (?), or the database name contains a question mark and was not escaped
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://u:p@
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://<credentials>@
+  | Empty hosts list
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://a@b@h
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://<credentials>@h
+  | Unescaped @ in auth info
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://h:0
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://h:0
+  | Invalid port: 0. Port must be an integer greater than 0 and less than 65536
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://h:70000
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://h:70000
+  | Invalid port: 70000. Port must be an integer greater than 0 and less than 65536
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://user:secret@h:abc
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://<credentials>@h:abc
+  | Invalid port: abc. Port must be an integer greater than 0 and less than 65536
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://.h
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://.h
+  | Hostname cannot start with a dot: .h
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://h.
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://h.
+  | Hostname cannot end with a dot: h.
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://a..b
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://a..b
+  | Runs of multiple dots are not allowed in hostname: a..b
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://:27017
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://:27017
+  | Host is empty: :27017
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://h:1:2
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://h:1:2
+  | Multiple port delimiters are not allowed: h:1:2
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://,h
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://,h
+  | Empty host given in the host list
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://h/?appName
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://h/?appName
+  | Option appName has no value
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://u:p:q@h
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://<credentials>@h
+  | User name and password must be urlencoded.
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://h/d:b
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://h/d:b
+  | Auth database must be urlencoded.
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
+mongodb://u/ser:p@h
+  Mongo::Error::InvalidURI
+  | Bad URI: mongodb://u/ser:p@h
+  | Auth database must be urlencoded.
+  | MongoDB URI must be in the following format: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+  | Please see the following URL for more information: https://www.mongodb.com/docs/manual/reference/connection-string/
